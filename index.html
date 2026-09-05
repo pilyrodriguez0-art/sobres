@@ -45,7 +45,11 @@
   .banner button{background:none;border:0;color:var(--acento);font:inherit;font-size:14px;padding:0;cursor:pointer;text-decoration:underline}
   .banner .cerrar{margin-left:auto;color:var(--suave);text-decoration:none;font-size:18px;line-height:1}
 
-  .rotulo{font-size:12px;color:var(--suave);margin:30px 0 0;letter-spacing:.02em}
+  .rotulo{font-size:12px;color:var(--suave);margin:30px 0 0;letter-spacing:.02em;
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .rotulo b{font-weight:400;color:var(--suave)}
+  .rotulo .pas{color:var(--alerta)}
+  .segunda{font-size:14px;color:var(--suave);margin-top:6px}
 
   .fila{
     display:block;width:100%;text-align:left;background:none;color:inherit;font:inherit;
@@ -139,6 +143,7 @@
     <div class="cifra grande" id="totalQueda">Q0</div>
     <div class="pie" id="totalPie"></div>
   </div>
+  <div class="segunda" id="totalSegunda"></div>
   <div id="avisos"></div>
   <div id="tablero"></div>
   <div class="acciones">
@@ -333,7 +338,6 @@
     catch(e){ alert("No se pudo guardar. Puede que el almacenamiento esté lleno."); }
   }
 
-  /* ---------- presupuestos y saldos ---------- */
   function presu(catId, mes){
     var p = datos.presupuestos[mes];
     return (p && typeof p[catId] === "number") ? p[catId] : 0;
@@ -369,15 +373,15 @@
     return hijosDe(gid).reduce(function(s,c){ return s + gastado(c.id, mes); }, 0);
   }
 
-  /* Cuotas restantes de un sobre con fecha final, contando el mes actual. */
   function cuotasRestantes(c){
     if(!c.cuotas || !c.cuotas.hasta) return null;
     var mes = mesDe();
     if(mes > c.cuotas.hasta) return 0;
-    return mesesDesde(mes, c.cuotas.hasta).length + 1;
+    var n = mesesDesde(mes, c.cuotas.hasta).length + 1;
+    if(gastado(c.id, mes) > 0){ n -= 1; }
+    return n;
   }
 
-  /* ---------- arranque de mes ---------- */
   function revisarMes(){
     var mes = mesDe();
     if(datos.visto === mes) return false;
@@ -391,7 +395,6 @@
     return copiado;
   }
 
-  /* ---------- pintado ---------- */
   function filaHTML(){
     var b = document.createElement("button");
     b.className = "fila";
@@ -459,7 +462,6 @@
     b.setAttribute("data-grupo", gr.id);
     var plegado = !!datos.plegados[gr.id];
     b.setAttribute("aria-expanded", plegado ? "false" : "true");
-    b.querySelector(".nom").innerHTML = "";
     b.querySelector(".nom").textContent = gr.nombre;
     var chev = document.createElement("span");
     chev.className = "chev";
@@ -495,9 +497,14 @@
       var grupos = (sec.id === "compras") ? datos.grupos : [];
       if(!propias.length && !grupos.length) return;
 
+      var secGas = 0, secPre = 0;
+
       var rot = document.createElement("p");
       rot.className = "rotulo";
-      rot.textContent = sec.titulo;
+      var eti = document.createElement("span");
+      eti.textContent = sec.titulo;
+      var tot = document.createElement("b");
+      rot.appendChild(eti); rot.appendChild(tot);
       tab.appendChild(rot);
 
       grupos.forEach(function(gr){
@@ -510,6 +517,7 @@
         tab.appendChild(cont);
         var p = presuGrupo(gr.id, mes), g = gastadoGrupo(gr.id, mes);
         totalDisp += p; totalGas += g;
+        secPre += p; secGas += g;
         if(p > 0 && p - g < 0){ pasados++; }
       });
 
@@ -521,25 +529,41 @@
           if(gastado(c.id, mes) === 0 && presu(c.id, mes) > 0){ fijosPend++; }
         }
         tab.appendChild(nodo);
-        if(c.tipo !== "ahorro"){
-          var disp = disponible(c, mes), g2 = gastado(c.id, mes);
+        var g2 = gastado(c.id, mes);
+        if(c.tipo === "ahorro"){
+          secGas += g2; secPre += presu(c.id, mes);
+        }else{
+          var disp = disponible(c, mes);
+          secGas += g2; secPre += presu(c.id, mes);
           if(presu(c.id, mes) > 0){
             totalDisp += disp; totalGas += g2;
             if(disp - g2 < 0){ pasados++; }
           }
         }
       });
+      tot.textContent = secPre > 0 ? Q(secGas) + " de " + Q(secPre) : Q(secGas);
+      if(secPre > 0 && secGas > secPre){ tot.className = "pas"; }
       var ult = tab.lastElementChild;
       if(ult && ult.classList.contains("fila")){ ult.classList.add("cierre"); }
     });
 
-    $("totalQueda").textContent = Q(Math.max(totalDisp - totalGas, 0));
-    var pie = [];
-    if(totalDisp === 0){ pie.push("ponele monto a tus sobres"); }
-    else { pie.push("te quedan este mes"); }
+    var gastoMes = 0;
+    datos.movimientos.forEach(function(m){
+      if(m.fecha.slice(0,7) !== mes) return;
+      var c = datos.categorias.filter(function(x){ return x.id === m.catId; })[0];
+      if(c && c.tipo === "ahorro") return;
+      gastoMes += m.monto;
+    });
+
+    $("totalQueda").textContent = Q(gastoMes);
+    var pie = ["llevás gastado este mes"];
     if(pasados){ pie.push(pasados + (pasados === 1 ? " sobre pasado" : " sobres pasados")); }
     if(fijosPend){ pie.push(fijosPend + (fijosPend === 1 ? " fijo por pagar" : " fijos por pagar")); }
     $("totalPie").textContent = pie.join(" · ");
+
+    $("totalSegunda").textContent = totalDisp > 0
+      ? "Te quedan " + Q(Math.max(totalDisp - totalGas, 0)) + " de " + Q(totalDisp) + " presupuestados"
+      : "Todavía no asignaste montos";
   }
 
   function aviso(texto, accion, etiqueta){
@@ -563,7 +587,6 @@
     $("avisos").appendChild(d);
   }
 
-  /* ---------- hojas ---------- */
   var HOJAS = ["hojaMonto","hojaPicker","hojaAjustes","hojaHist","hojaResp"];
   function abrir(id){ $("fondo").classList.add("ver"); $(id).classList.add("ver"); }
   function cerrarTodo(){
@@ -576,7 +599,6 @@
     b.addEventListener("click", cerrarTodo);
   });
 
-  /* ---------- registrar ---------- */
   var activa = null, buffer = "", grupoEnCurso = null;
 
   function pintarMonto(){
@@ -701,7 +723,6 @@
     if(c){ abrirMonto(c); }
   });
 
-  /* ---------- ajustes ---------- */
   function filaCfg(obj, esGrupo){
     var mes = mesDe();
     var d = document.createElement("div");
@@ -720,10 +741,10 @@
     if(!esGrupo){
       d.querySelector(".ar").checked = !!obj.arrastra;
       d.querySelector(".nt").checked = !!obj.pideNota;
-      if(obj.tipo === "ahorro" || obj.tipo === "fijo"){ d.querySelector(".ar").disabled = (obj.tipo === "ahorro"); }
+      if(obj.tipo === "ahorro"){ d.querySelector(".ar").disabled = true; }
     }
     d.querySelector(".quitar").addEventListener("click", function(){
-      if(confirm("¿Quitar \u201c" + obj.nombre + "\u201d? Sus movimientos quedan en el historial.")){ d.remove(); }
+      if(confirm("\u00bfQuitar " + obj.nombre + "? Sus movimientos quedan en el historial.")){ d.remove(); }
     });
     return d;
   }
@@ -762,7 +783,6 @@
     var f = filaCfg(c, false);
     $("campos").appendChild(f);
     f.querySelector(".n").focus();
-    f.scrollIntoView({block:"center"});
   });
 
   $("guardarAjustes").addEventListener("click", function(){
@@ -793,7 +813,6 @@
     guardar(); pintar(); cerrarTodo();
   });
 
-  /* ---------- historial ---------- */
   $("btnHistorial").addEventListener("click", function(){
     var cont = $("movimientos");
     cont.innerHTML = "";
@@ -801,11 +820,11 @@
     $("sHist").textContent = todos.length
       ? todos.length + (todos.length === 1 ? " movimiento en total" : " movimientos en total")
       : "Todavía no hay movimientos.";
-    var mesActual = null;
+    var mesAct = null;
     todos.slice(0, 400).forEach(function(m){
       var k = m.fecha.slice(0,7);
-      if(k !== mesActual){
-        mesActual = k;
+      if(k !== mesAct){
+        mesAct = k;
         var r = document.createElement("p");
         r.className = "subrotulo";
         r.textContent = nombreMes(k).toUpperCase();
@@ -833,7 +852,6 @@
     abrir("hojaHist");
   });
 
-  /* ---------- CSV ---------- */
   function csv(){
     var cab = ["fecha","hora","seccion","grupo","sobre","monto","nota","presupuesto_del_mes"];
     var lineas = [cab.join(",")];
@@ -870,7 +888,6 @@
     setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
   });
 
-  /* ---------- respaldo ---------- */
   $("btnRespaldo").addEventListener("click", function(){
     $("areaResp").value = JSON.stringify(datos);
     abrir("hojaResp");
@@ -889,13 +906,11 @@
     }
   });
 
-  /* ---------- modo claro/oscuro ---------- */
   var mq = window.matchMedia("(prefers-color-scheme: dark)");
   function modo(){ document.documentElement.setAttribute("data-m", mq.matches ? "oscuro" : "claro"); }
   mq.addEventListener("change", modo);
   modo();
 
-  /* ---------- arranque ---------- */
   cargar();
   var copiado = revisarMes();
   guardar();

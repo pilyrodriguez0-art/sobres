@@ -116,6 +116,13 @@
     border-radius:6px;background:none;color:var(--tinta);font:600 16px/1 inherit;cursor:pointer;
   }
   .secundaria{display:block;width:100%;margin-top:8px;padding:12px;border:0;background:none;color:var(--suave);font:inherit;font-size:15px;cursor:pointer}
+  .medios{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+  .medios button{
+    flex:1 1 auto;font:inherit;font-size:14px;padding:10px 6px;cursor:pointer;
+    background:none;border:1px solid var(--linea);border-radius:6px;color:var(--suave);
+  }
+  .medios button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:var(--bg)}
+  .medios button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
   .campoNota{margin-top:14px}
   .campoNota label{display:block;font-size:13px;color:var(--suave);margin-bottom:5px}
 
@@ -165,6 +172,13 @@
     <button data-t="4">4</button><button data-t="5">5</button><button data-t="6">6</button>
     <button data-t="7">7</button><button data-t="8">8</button><button data-t="9">9</button>
     <button data-t=".">.</button><button data-t="0">0</button><button data-t="b">←</button>
+  </div>
+  <div class="medios" id="medios">
+    <button type="button" data-medio="Efectivo">Efectivo</button>
+    <button type="button" data-medio="Débito">Débito</button>
+    <button type="button" data-medio="Visa">Visa</button>
+    <button type="button" data-medio="Mastercard">Mastercard</button>
+    <button type="button" data-medio="Transferencia">Transferencia</button>
   </div>
   <div class="campoNota" id="cajaNota" hidden>
     <label for="txtNota">¿De qué se trata?</label>
@@ -599,7 +613,21 @@
     b.addEventListener("click", cerrarTodo);
   });
 
-  var activa = null, buffer = "", grupoEnCurso = null;
+  var activa = null, buffer = "", grupoEnCurso = null, medio = "Efectivo";
+
+  function pintarMedios(){
+    Array.prototype.forEach.call($("medios").querySelectorAll("button"), function(b){
+      b.setAttribute("aria-pressed", b.getAttribute("data-medio") === medio ? "true" : "false");
+    });
+  }
+  $("medios").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-medio]");
+    if(!b) return;
+    medio = b.getAttribute("data-medio");
+    datos.ultimoMedio = medio;
+    guardar();
+    pintarMedios();
+  });
 
   function pintarMonto(){
     $("pantalla").textContent = "Q" + (buffer === "" ? "0" : buffer);
@@ -624,7 +652,9 @@
     }else if(c.tipo === "fijo"){
       sub = gastado(c.id, mes) > 0
         ? "Ya registraste " + Q(gastado(c.id, mes)) + " este mes"
-        : (presu(c.id, mes) > 0 ? "Monto esperado, corregilo si el recibo vino distinto" : "Sin monto esperado");
+        : (presu(c.id, mes) > 0
+            ? "Monto esperado. Guardá solo el monto, o marcalo pagado si ya lo pagaste."
+            : "Sin monto esperado. Podés guardar el monto sin marcarlo pagado.");
       $("btnGuardar").textContent = "Marcar como pagado";
     }else{
       var p = presu(c.id, mes);
@@ -634,10 +664,15 @@
       $("btnGuardar").textContent = "Guardar gasto";
     }
     $("sMonto").textContent = sub;
+    medio = datos.ultimoMedio || "Efectivo";
+    pintarMedios();
     $("txtNota").value = "";
     $("cajaNota").hidden = !c.pideNota;
     $("verNota").hidden = c.pideNota;
-    $("btnSeguir").hidden = !c.grupo;
+    $("btnSeguir").hidden = !(c.grupo || c.tipo === "fijo");
+    $("btnSeguir").textContent = c.tipo === "fijo"
+      ? "Solo guardar el monto esperado"
+      : "Guardar y seguir con otro";
     grupoEnCurso = c.grupo || null;
     abrir("hojaMonto");
   }
@@ -665,7 +700,7 @@
   function registrar(){
     var monto = parseFloat(buffer);
     if(!(monto > 0) || !activa) return false;
-    var mov = {id:nid(), catId:activa.id, monto:monto, fecha:new Date().toISOString()};
+    var mov = {id:nid(), catId:activa.id, monto:monto, fecha:new Date().toISOString(), medio:medio};
     var nota = $("txtNota").value.trim();
     if(nota){ mov.nota = nota; }
     datos.movimientos.push(mov);
@@ -680,6 +715,13 @@
 
   $("btnSeguir").addEventListener("click", function(){
     var gid = grupoEnCurso;
+    if(activa && activa.tipo === "fijo"){
+      var m = parseFloat(buffer);
+      if(!(m > 0)) return;
+      ponerPresu(activa.id, mesDe(), m);
+      guardar(); pintar(); cerrarTodo();
+      return;
+    }
     if(!registrar()) return;
     $("hojaMonto").classList.remove("ver");
     abrirPicker(gid);
@@ -840,6 +882,7 @@
       d.querySelector(".nm").textContent = c ? c.nombre : "Sobre eliminado";
       var pie = f.toLocaleDateString("es-GT",{day:"numeric",month:"short"}) + " · " +
                 f.toLocaleTimeString("es-GT",{hour:"numeric",minute:"2-digit"});
+      if(m.medio){ pie += " · " + m.medio; }
       if(m.nota){ pie += " · " + m.nota; }
       d.querySelector("small").textContent = pie;
       d.querySelector(".mt").textContent = (c && c.tipo === "ahorro" ? "+" : "") + Q(m.monto);
@@ -853,7 +896,7 @@
   });
 
   function csv(){
-    var cab = ["fecha","hora","seccion","grupo","sobre","monto","nota","presupuesto_del_mes"];
+    var cab = ["fecha","hora","seccion","grupo","sobre","monto","forma_de_pago","nota","presupuesto_del_mes"];
     var lineas = [cab.join(",")];
     function esc(v){
       v = (v === undefined || v === null) ? "" : String(v);
@@ -870,6 +913,7 @@
         esc(gr ? gr.nombre : ""),
         esc(c ? c.nombre : "eliminado"),
         esc(m.monto),
+        esc(m.medio || ""),
         esc(m.nota || ""),
         esc(c ? presu(c.id, m.fecha.slice(0,7)) : "")
       ].join(","));

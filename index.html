@@ -86,6 +86,22 @@
   }
   .hoja.ver{transform:translateY(0)}
   .hoja h2{font:600 18px/1.3 inherit;margin:0 0 4px}
+  .barraHoja{
+    position:sticky;top:0;z-index:3;background:var(--sup);
+    display:flex;align-items:center;gap:12px;
+    margin:-20px -18px 16px;padding:14px 18px 12px;
+    border-bottom:1px solid var(--linea);
+  }
+  .barraHoja h2{margin:0;flex:1;min-width:0;font-size:17px}
+  .barraHoja .atras{
+    background:none;border:0;color:var(--tinta);font:inherit;font-size:22px;
+    line-height:1;padding:4px 8px 4px 0;cursor:pointer;
+  }
+  .barraHoja .guarda{
+    background:var(--acento);color:var(--sup);border:0;border-radius:6px;
+    font:600 14px/1 inherit;padding:10px 14px;cursor:pointer;white-space:nowrap;
+  }
+  .barraHoja button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
   .hoja .sub{color:var(--suave);font-size:14px;margin:0 0 16px}
   .monto{font-size:52px;line-height:1;text-align:center;padding:6px 0 14px;letter-spacing:-.02em}
   .teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}

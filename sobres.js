@@ -332,7 +332,8 @@ var APP = (function(){
 
   function pintar(){
     var mes = mesDe();
-    $("mes").textContent = nombreMes(mes);
+    var hoyTxt = new Date().toLocaleDateString("es-GT",{day:"numeric",month:"long",year:"numeric"});
+    $("mes").textContent = hoyTxt.charAt(0).toUpperCase() + hoyTxt.slice(1);
     var tab = $("tablero");
     tab.innerHTML = "";
     var totalDisp = 0, totalGas = 0, pasados = 0, fijosPend = 0;
@@ -438,6 +439,38 @@ var APP = (function(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-cerrar]"), function(b){
     b.addEventListener("click", cerrarTodo);
   });
+
+  /* ---------- barra superior de cada hoja ---------- */
+  var ACCION_ARRIBA = { hojaAjustes: "guardarAjustes", hojaTar: "guardarTarjetas" };
+  function armarBarras(){
+    HOJAS.forEach(function(id){
+      var h = $(id);
+      if(!h || h.querySelector(".barraHoja")) return;
+      var titulo = h.querySelector("h2");
+      if(!titulo) return;
+      var barra = document.createElement("div");
+      barra.className = "barraHoja";
+      var atras = document.createElement("button");
+      atras.type = "button";
+      atras.className = "atras";
+      atras.setAttribute("aria-label", "Volver a los sobres");
+      atras.textContent = "\u2190";
+      atras.addEventListener("click", function(){ cerrarTodo(); });
+      barra.appendChild(atras);
+      h.insertBefore(barra, h.firstChild);
+      barra.appendChild(titulo);
+      var destino = ACCION_ARRIBA[id];
+      if(destino && $(destino)){
+        var g = document.createElement("button");
+        g.type = "button";
+        g.className = "guarda";
+        g.textContent = "Guardar";
+        g.addEventListener("click", function(){ $(destino).click(); });
+        barra.appendChild(g);
+      }
+    });
+  }
+  armarBarras();
 
   /* ---------- registro ---------- */
   var activa = null, buffer = "", medio = null, fechaMov = null;

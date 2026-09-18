@@ -440,7 +440,41 @@ var APP = (function(){
   });
 
   /* ---------- registro ---------- */
-  var activa = null, buffer = "", medio = null;
+  var activa = null, buffer = "", medio = null, fechaMov = null;
+
+  function aISO(d){
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") +
+           "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function esHoy(d){ return aISO(d) === aISO(new Date()); }
+  function pintarFecha(){
+    var b = $("btnFecha");
+    var texto = (esHoy(fechaMov) ? "Hoy, " : "") +
+      fechaMov.toLocaleDateString("es-GT",{day:"numeric",month:"long"});
+    b.textContent = texto;
+    var s = document.createElement("span");
+    s.className = "cambia";
+    s.textContent = "cambiar";
+    b.appendChild(s);
+  }
+  $("btnFecha").addEventListener("click", function(){
+    var i = $("inpFecha");
+    var hoy = new Date();
+    var atras = new Date(hoy.getFullYear(), hoy.getMonth()-2, hoy.getDate());
+    i.min = aISO(atras);
+    i.max = aISO(hoy);
+    i.value = aISO(fechaMov);
+    i.hidden = false;
+    if(i.showPicker){ try{ i.showPicker(); }catch(e){} } else { i.focus(); }
+  });
+  $("inpFecha").addEventListener("change", function(){
+    if(!this.value) return;
+    var p = this.value.split("-");
+    fechaMov = new Date(+p[0], +p[1]-1, +p[2], 12, 0, 0);
+    this.hidden = true;
+    pintarFecha();
+    if(APP.avisarCiclo){ APP.avisarCiclo(medio); }
+  });
 
   function pintarMedios(){
     var c = $("medios");
@@ -478,6 +512,9 @@ var APP = (function(){
     activa = c;
     buffer = "";
     medio = null;
+    fechaMov = new Date();
+    $("inpFecha").hidden = true;
+    pintarFecha();
     var mes = mesDe();
     if(c.tipo === "fijo" && presu(c.id, mes) > 0 && gastado(c.id, mes) === 0){
       buffer = String(presu(c.id, mes));
@@ -536,7 +573,9 @@ var APP = (function(){
   $("btnGuardar").addEventListener("click", function(){
     var monto = parseFloat(buffer);
     if(!(monto > 0) || !activa || !medio) return;
-    var mov = {id:nid(), catId:activa.id, monto:monto, fecha:new Date().toISOString(), medio:medio};
+    var f = fechaMov;
+    if(esHoy(f)){ f = new Date(); }
+    var mov = {id:nid(), catId:activa.id, monto:monto, fecha:f.toISOString(), medio:medio};
     var nota = $("txtNota").value.trim();
     if(nota){ mov.nota = nota; }
     datos.movimientos.push(mov);

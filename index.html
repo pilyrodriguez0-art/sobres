@@ -107,6 +107,13 @@
   .secundaria{display:block;width:100%;margin-top:8px;padding:12px;border:0;background:none;color:var(--suave);font:inherit;font-size:15px;cursor:pointer}
 
   .rotuloPago{font-size:12px;color:var(--suave);margin:14px 0 6px}
+  .lineaFecha{
+    display:block;width:100%;text-align:left;margin-top:14px;padding:11px 12px;
+    background:none;border:1px solid var(--linea);border-radius:6px;
+    color:var(--tinta);font:inherit;font-size:15px;cursor:pointer;
+  }
+  .lineaFecha:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+  .lineaFecha .cambia{float:right;color:var(--suave);font-size:13px}
   .medios{display:flex;flex-wrap:wrap;gap:7px}
   .medios button{
     flex:1 1 auto;font:inherit;font-size:14px;padding:10px 6px;cursor:pointer;
@@ -183,6 +190,8 @@
     <button data-t="7">7</button><button data-t="8">8</button><button data-t="9">9</button>
     <button data-t=".">.</button><button data-t="0">0</button><button data-t="b">←</button>
   </div>
+  <button type="button" class="lineaFecha" id="btnFecha"></button>
+  <input type="date" id="inpFecha" hidden>
   <p class="rotuloPago">¿Cómo lo pagaste?</p>
   <div class="medios" id="medios"></div>
   <p class="recuerdo" id="recuerdo"></p>

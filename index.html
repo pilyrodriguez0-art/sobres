@@ -25,8 +25,9 @@
     padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
     min-height:100vh;
   }
+  [hidden]{display:none !important}
   .cifra{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-variant-numeric:tabular-nums}
-  .marco{max-width:520px;margin:0 auto;padding:16px 18px 110px}
+  .vista{max-width:520px;margin:0 auto;padding:16px 18px calc(110px + env(safe-area-inset-bottom))}
 
   header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
   header h1{font:600 20px/1.2 inherit;margin:0;letter-spacing:-.01em}
@@ -60,145 +61,320 @@
   .pasado .val,.pasado .nota{color:var(--alerta)}
   .pasado .barra i{background:var(--alerta)}
   .pagado .val,.pagado .nom{opacity:.5}
-
   .seccion{border-top:1.5px solid var(--tinta);padding:16px 0 14px}
   .seccion .nom{font-weight:600;font-size:17px}
   .seccion .val{font-size:22px}
   .contenido{padding-left:14px}
+  .contenido .fila{padding:11px 0 9px}
+  .contenido .nom{font-size:15px;color:var(--suave)}
+  .contenido .val{font-size:19px}
   .chev{font-size:13px;color:var(--suave);margin-left:6px}
-  .cierre{border-bottom:1px solid var(--linea)}
+  .agregar{
+    display:block;width:100%;text-align:left;background:none;border:0;border-top:1px dashed var(--linea);
+    color:var(--suave);font:inherit;font-size:14px;padding:11px 0;cursor:pointer;
+  }
 
-  .acciones{display:flex;flex-wrap:wrap;gap:10px;margin-top:34px}
   button.txt{
     background:none;border:1px solid var(--linea);color:var(--suave);
     font:inherit;font-size:14px;padding:9px 14px;border-radius:2px;cursor:pointer;
   }
   button.txt:active{background:var(--sup)}
   button.txt:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
-
-  .fondo{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
-  .fondo.ver{opacity:1;pointer-events:auto}
-  .hoja{
-    position:fixed;left:0;right:0;bottom:0;background:var(--sup);
-    border-radius:14px 14px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));
-    transform:translateY(101%);transition:transform .28s cubic-bezier(.32,.72,0,1);
-    max-height:92vh;overflow-y:auto;z-index:10;
-  }
-  .hoja.ver{transform:translateY(0)}
-  .hoja h2{font:600 18px/1.3 inherit;margin:0 0 4px}
-  .barraHoja{
-    position:sticky;top:0;z-index:3;background:var(--sup);
-    display:flex;align-items:center;gap:12px;
-    margin:-20px -18px 16px;padding:14px 18px 12px;
-    border-bottom:1px solid var(--linea);
-  }
-  .barraHoja h2{margin:0;flex:1;min-width:0;font-size:17px}
-  .barraHoja .atras{
-    background:none;border:0;color:var(--tinta);font:inherit;font-size:22px;
-    line-height:1;padding:4px 8px 4px 0;cursor:pointer;
-  }
-  .barraHoja .guarda{
-    background:var(--acento);color:var(--sup);border:0;border-radius:6px;
-    font:600 14px/1 inherit;padding:10px 14px;cursor:pointer;white-space:nowrap;
-  }
-  .barraHoja button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
-  .hoja .sub{color:var(--suave);font-size:14px;margin:0 0 16px}
-  .monto{font-size:52px;line-height:1;text-align:center;padding:6px 0 14px;letter-spacing:-.02em}
-  .teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .teclado button{
-    font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:26px;padding:14px 0;
-    background:var(--bg);border:1px solid var(--linea);border-radius:6px;color:var(--tinta);cursor:pointer;
-  }
-  .teclado button:active{background:var(--linea)}
-  input[type=text],input[type=number],textarea,select{
-    font:inherit;font-size:16px;padding:10px;border:1px solid var(--linea);
-    border-radius:4px;background:var(--campo);color:var(--tinta);width:100%;
-  }
-  input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--acento);outline-offset:-1px}
   .principal{
     display:block;width:100%;margin-top:14px;padding:16px;border:0;border-radius:6px;
     background:var(--acento);color:var(--sup);font:600 17px/1 inherit;cursor:pointer;
   }
   .principal[disabled]{opacity:.35}
   .secundaria{display:block;width:100%;margin-top:8px;padding:12px;border:0;background:none;color:var(--suave);font:inherit;font-size:15px;cursor:pointer}
+  .peligro{color:var(--alerta)}
 
-  .rotuloPago{font-size:12px;color:var(--suave);margin:14px 0 6px}
-  .lineaFecha{
-    display:block;width:100%;text-align:left;margin-top:14px;padding:11px 12px;
-    background:none;border:1px solid var(--linea);border-radius:6px;
-    color:var(--tinta);font:inherit;font-size:15px;cursor:pointer;
+  input[type=text],input[type=number],input[type=date],input[type=month],textarea,select{
+    font:inherit;font-size:16px;padding:10px;border:1px solid var(--linea);
+    border-radius:4px;background:var(--campo);color:var(--tinta);width:100%;
   }
-  .lineaFecha:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
-  .lineaFecha .cambia{float:right;color:var(--suave);font-size:13px}
-  .medios{display:flex;flex-wrap:wrap;gap:7px}
-  .medios button{
-    flex:1 1 auto;font:inherit;font-size:14px;padding:10px 6px;cursor:pointer;
+  input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--acento);outline-offset:-1px}
+  input[type=checkbox]{width:auto}
+
+  /* barra de pestañas */
+  .tabs{
+    position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--sup);
+    border-top:1px solid var(--linea);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tabs button{
+    background:none;border:0;color:var(--suave);font:inherit;font-size:11px;cursor:pointer;
+    padding:9px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  }
+  .tabs button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .tabs button[aria-current="page"]{color:var(--tinta);font-weight:600}
+  .tabs button:focus-visible{outline:2px solid var(--acento);outline-offset:-2px}
+
+  /* hojas */
+  .fondo{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+  .fondo.ver{opacity:1;pointer-events:auto}
+  .hoja{
+    position:fixed;left:0;right:0;bottom:0;background:var(--sup);
+    border-radius:14px 14px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+    transform:translateY(101%);transition:transform .28s cubic-bezier(.32,.72,0,1);
+    max-height:94vh;overflow-y:auto;z-index:10;
+  }
+  .hoja.ver{transform:translateY(0)}
+  .hoja h2{font:600 18px/1.3 inherit;margin:0 0 4px}
+  .hoja .sub{color:var(--suave);font-size:14px;margin:0 0 16px}
+  .barraHoja{
+    position:sticky;top:0;z-index:3;background:var(--sup);
+    display:flex;align-items:center;gap:12px;
+    margin:-20px -18px 16px;padding:14px 18px 12px;border-bottom:1px solid var(--linea);
+  }
+  .barraHoja h2{margin:0;flex:1;min-width:0;font-size:17px}
+  .barraHoja .atras{background:none;border:0;color:var(--tinta);font:inherit;font-size:22px;line-height:1;padding:4px 8px 4px 0;cursor:pointer}
+  .barraHoja .guarda{background:var(--acento);color:var(--sup);border:0;border-radius:6px;font:600 14px/1 inherit;padding:10px 14px;cursor:pointer;white-space:nowrap}
+
+  /* registrar */
+  .etiq{display:block;font-size:12px;color:var(--suave);margin:16px 0 6px;letter-spacing:.02em}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chips button{
+    font:inherit;font-size:14px;padding:9px 12px;cursor:pointer;
     background:none;border:1px solid var(--linea);border-radius:6px;color:var(--suave);
   }
-  .medios button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:var(--bg)}
-  .medios button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+  .chips button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:var(--bg)}
+  .chips button.nueva{border-style:dashed}
+  .chips button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+  .formNueva{border:1px solid var(--linea);border-radius:8px;padding:12px;margin-top:10px;background:var(--bg)}
+  .aviso{font-size:13px;color:var(--alerta);margin:8px 0 0}
+  .check{display:flex;gap:8px;align-items:center;font-size:15px;margin-top:12px;cursor:pointer}
+  .monto{font-size:52px;line-height:1;text-align:center;padding:14px 0;letter-spacing:-.02em}
+  .teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .teclado button{
+    font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:26px;padding:14px 0;
+    background:var(--bg);border:1px solid var(--linea);border-radius:6px;color:var(--tinta);cursor:pointer;
+  }
+  .teclado button:active{background:var(--linea)}
+  .lineaFecha{
+    display:block;width:100%;text-align:left;margin-top:14px;padding:11px 12px;
+    background:none;border:1px solid var(--linea);border-radius:6px;color:var(--tinta);font:inherit;font-size:15px;cursor:pointer;
+  }
+  .lineaFecha .cambia{float:right;color:var(--suave);font-size:13px}
   .recuerdo{font-size:13px;color:var(--suave);margin:8px 0 0}
-  .campoNota{margin-top:14px}
-  .campoNota label{display:block;font-size:13px;color:var(--suave);margin-bottom:5px}
 
-  .cfg{padding:13px 0;border-top:1px solid var(--linea)}
-  .cfg .l1{display:flex;gap:10px;align-items:center}
-  .cfg .l1 .n{flex:1;min-width:0}
-  .cfg .l1 .mo{width:100px;text-align:right}
-  .cfg .l2{display:flex;gap:16px;align-items:center;margin-top:9px;font-size:14px;color:var(--suave)}
-  .cfg label{display:flex;gap:6px;align-items:center;cursor:pointer}
-  .cfg input[type=checkbox]{width:auto}
-  .quitar{background:none;border:0;color:var(--alerta);font:inherit;font-size:14px;padding:6px;cursor:pointer}
-  .subrotulo{font-size:12px;color:var(--suave);margin:24px 0 0;letter-spacing:.02em}
+  /* tarjetas visuales */
+  .tarjeta{border-radius:12px;aspect-ratio:1.586;padding:14px 16px;position:relative;text-align:left}
+  .tarjeta .tNom{font-size:17px;font-weight:600;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tarjeta .tChip{width:36px;height:26px;border-radius:5px;background:#D6C48E;margin-top:14px}
+  .tarjeta .tRed{position:absolute;right:16px;bottom:12px;font-size:15px;font-weight:600}
+  .tarjeta .tTipo{position:absolute;left:16px;bottom:13px;font-size:12px}
+  .tarjeta.chica{padding:8px 10px;border-radius:8px}
+  .tarjeta.chica .tNom{font-size:12px}
+  .tarjeta.chica .tChip{width:18px;height:13px;border-radius:3px;margin-top:6px}
+  .tarjeta.chica .tRed{font-size:11px;right:10px;bottom:6px}
+  .tarjeta.chica .tTipo{font-size:10px;left:10px;bottom:7px}
+  .rejillaT{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .elige{display:block;width:100%;padding:0;border:0;background:none;border-radius:10px;cursor:pointer}
+  .elige[aria-pressed="true"]{outline:3px solid var(--tinta);outline-offset:2px}
+  .elige:focus-visible{outline:3px solid var(--acento);outline-offset:2px}
+  .filaBase,.segm{display:flex;gap:7px}
+  .filaBase{margin-top:10px}
+  .filaBase button,.segm button{
+    flex:1 1 0;font:inherit;font-size:14px;padding:11px 6px;cursor:pointer;
+    background:none;border:1px solid var(--linea);border-radius:6px;color:var(--suave);
+  }
+  .filaBase button[aria-pressed="true"],.segm button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:var(--bg)}
+  .paleta{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px}
+  .paleta button{aspect-ratio:1;border:0;border-radius:4px;padding:0;cursor:pointer}
+  .paleta button[aria-pressed="true"]{outline:2px solid var(--tinta);outline-offset:2px}
+  .editor{border-top:1.5px solid var(--tinta);margin-top:20px;padding-top:16px}
+  .editor .prev{max-width:300px;margin:0 auto 6px}
+  .dias{display:flex;gap:12px}
+  .dias > div{flex:1}
+  .dias input{text-align:center}
+  .explica{font-size:14px;color:var(--tinta);background:var(--sup);border-radius:6px;padding:10px 12px;margin:12px 0 0}
 
-  .linea{display:flex;justify-content:space-between;gap:12px;align-items:baseline;
-    padding:11px 0;border-top:1px solid var(--linea)}
+  /* listas y bloques */
+  .subrotulo{font-size:12px;color:var(--suave);margin:26px 0 0;letter-spacing:.02em}
+  .linea{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:11px 0;border-top:1px solid var(--linea)}
   .linea .et{font-size:14px}
   .linea .et small{color:var(--suave);font-size:12px}
   .linea .ci{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-variant-numeric:tabular-nums;font-size:16px}
   .bloque{border-top:1.5px solid var(--tinta);margin-top:6px;padding-top:12px}
   .bloque .ng{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:32px;line-height:1}
   .bloque .pe{font-size:12px;color:var(--suave);margin-top:6px}
-  .tarj{border-top:1px solid var(--linea);padding:14px 0 12px}
-  .tarj h3{font:600 16px/1.3 inherit;margin:0 0 8px}
-  .tarj p{margin:4px 0;font-size:14px;color:var(--suave)}
-  .tarj .grande{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:22px;color:var(--tinta)}
+  .corte{border-top:1px solid var(--linea);padding:13px 0 12px}
+  .corte .cab{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .corte .cab b{font-weight:600;font-size:15px}
+  .corte .ci{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:18px}
+  .corte p{margin:5px 0 0;font-size:13px;color:var(--suave)}
+  .corte .manual{display:flex;gap:8px;align-items:center;margin-top:8px}
   .cfgT{display:flex;gap:8px;align-items:center;padding:11px 0;border-top:1px solid var(--linea)}
   .cfgT input[type=text]{flex:1;min-width:0}
-  .cfgT input[type=number]{width:64px;text-align:center}
-  .cfgT span{font-size:12px;color:var(--suave);white-space:nowrap}
-
+  .quitar{background:none;border:0;color:var(--alerta);font:inherit;font-size:14px;padding:6px;cursor:pointer}
   .mov{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:11px 0;border-top:1px solid var(--linea)}
   .mov small{display:block;color:var(--suave);font-size:13px}
   .mov .der{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
+
+  /* presupuesto */
+  .selMes{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--linea);border-radius:6px;margin-top:14px}
+  .selMes button{background:none;border:0;color:var(--tinta);font-size:22px;padding:8px 16px;cursor:pointer}
+  .selMes span{font-size:16px}
+  .pCat{border-top:1.5px solid var(--tinta);margin-top:14px;padding-top:12px}
+  .pFila{display:flex;align-items:center;gap:10px;padding:8px 0}
+  .pFila .pn{flex:1;min-width:0;font-size:15px}
+  .pFila input{width:120px;text-align:right}
+  .pCat > .pFila .pn{font-weight:600;font-size:16px}
+  .pSubs{padding-left:14px;border-left:1px solid var(--linea);margin-left:2px}
+  .pSubs .pn{color:var(--suave)}
+
+  /* más y categorías */
+  .menu button{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--linea);color:var(--tinta);font:inherit;font-size:16px;padding:15px 0;cursor:pointer}
+  .menu button small{display:block;font-size:13px;color:var(--suave);margin-top:2px}
+  .cCat{border-top:1.5px solid var(--tinta);margin-top:18px;padding-top:12px}
+  .cSub{border-top:1px solid var(--linea);padding:10px 0 10px 12px}
+  .cSub .l1{display:flex;gap:8px;align-items:center}
+  .cSub .l1 input{flex:1;min-width:0}
+  .cSub .l2{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-size:13px;color:var(--suave)}
+  .cSub label{display:flex;gap:6px;align-items:center;cursor:pointer}
+  .cSub .cuo{display:flex;gap:8px;margin-top:8px}
+  .cSub .cuo input{flex:1}
+  .cSub select{font-size:13px;padding:6px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<div class="marco">
-  <header><h1>Sobres</h1><span class="mes" id="mes"></span></header>
+
+<!-- ===== Sobres ===== -->
+<section class="vista" id="v-sobres">
+  <header><h1>Sobres</h1><span class="mes" id="fechaHoy"></span></header>
   <div class="resumen">
-    <div class="cifra grande" id="totalQueda">Q0</div>
+    <div class="cifra grande" id="totalGasto">Q0</div>
     <div class="pie" id="totalPie"></div>
   </div>
   <div class="segunda" id="totalSegunda"></div>
   <div id="avisos"></div>
+  <button class="principal" id="btnRegistrar">+ Registrar gasto</button>
   <div id="tablero"></div>
-  <div class="acciones">
-    <button class="txt" id="btnAjustes">Editar sobres y montos</button>
-    <button class="txt" id="btnHistorial">Movimientos</button>
-    <button class="txt" id="btnCaja">Ingresos y caja</button>
-    <button class="txt" id="btnTarjetas">Tarjetas</button>
-    <button class="txt" id="btnCsv">Exportar CSV</button>
-    <button class="txt" id="btnRespaldo">Respaldo</button>
+</section>
+
+<!-- ===== Presupuesto ===== -->
+<section class="vista" id="v-pres" hidden>
+  <header><h1>Presupuesto</h1></header>
+  <div class="selMes">
+    <button type="button" id="pAnt" aria-label="Mes anterior">‹</button>
+    <span id="pMes"></span>
+    <button type="button" id="pSig" aria-label="Mes siguiente">›</button>
   </div>
-</div>
+  <p class="segunda" id="pResumen"></p>
+  <div id="pLista"></div>
+  <button class="txt" id="pCopiar" style="margin-top:18px">Copiar montos del mes anterior</button>
+  <p class="segunda">Los montos se guardan solos al salir de cada campo.</p>
+</section>
+
+<!-- ===== Caja ===== -->
+<section class="vista" id="v-caja" hidden>
+  <header><h1>Ingresos y caja</h1><span class="mes" id="sCaja"></span></header>
+  <div id="cajaHoy"></div>
+  <div id="cajaProx"></div>
+  <div id="ingresosMes"></div>
+  <button class="txt" id="btnNuevoIngreso" style="margin-top:16px">Registrar un ingreso</button>
+  <div id="formIngreso" hidden style="margin-top:6px">
+    <label class="etiq" for="inMonto">MONTO</label>
+    <input type="number" id="inMonto" inputmode="decimal" min="0" step="0.01">
+    <label class="etiq" for="inFuente">FUENTE</label>
+    <select id="inFuente"></select>
+    <label class="etiq" for="inFecha">FECHA</label>
+    <input type="date" id="inFecha">
+    <label class="etiq" for="inNota">NOTA (OPCIONAL)</label>
+    <input type="text" id="inNota" autocomplete="off">
+    <button class="principal" id="guardarIngreso">Guardar ingreso</button>
+  </div>
+  <p class="subrotulo">FUENTES DE INGRESO</p>
+  <div id="cfgFuentes"></div>
+  <button class="txt" id="agregarFuente" style="margin-top:12px">Agregar fuente</button>
+  <button class="principal" id="guardarFuentes">Guardar fuentes</button>
+</section>
+
+<!-- ===== Tarjetas ===== -->
+<section class="vista" id="v-tar" hidden>
+  <header><h1>Tarjetas</h1></header>
+  <p class="segunda">Tocá una tarjeta para personalizarla.</p>
+  <div id="listaTar" class="rejillaT" style="margin-top:12px"></div>
+  <button class="txt" id="agregarTarjeta" style="margin-top:14px">Agregar tarjeta</button>
+  <div class="editor" id="editorTar" hidden>
+    <div class="prev" id="prevTar"></div>
+    <label class="etiq" for="etNombre">NOMBRE</label>
+    <input type="text" id="etNombre" autocomplete="off" placeholder="BBVA rosa">
+    <span class="etiq">TIPO</span>
+    <div class="segm" id="etTipo">
+      <button type="button" data-v="credito">Crédito</button>
+      <button type="button" data-v="debito">Débito</button>
+    </div>
+    <span class="etiq">RED</span>
+    <div class="segm" id="etRed">
+      <button type="button" data-v="Visa">Visa</button>
+      <button type="button" data-v="Mastercard">Mastercard</button>
+    </div>
+    <span class="etiq">COLOR</span>
+    <div class="paleta" id="etColor"></div>
+    <div id="etFechas">
+      <div class="dias">
+        <div><label class="etiq" for="etCorte">DÍA DE CORTE</label>
+          <input type="number" id="etCorte" min="1" max="31" inputmode="numeric" placeholder="1 a 31"></div>
+        <div><label class="etiq" for="etPago">DÍA DE PAGO</label>
+          <input type="number" id="etPago" min="1" max="31" inputmode="numeric" placeholder="1 a 31"></div>
+      </div>
+      <p class="explica" id="etExplica" hidden></p>
+    </div>
+    <button class="principal" id="etGuardar">Guardar tarjeta</button>
+    <button class="secundaria peligro" id="etQuitar">Quitar esta tarjeta</button>
+  </div>
+  <div id="pagosTar"></div>
+  <div id="porMedio"></div>
+</section>
+
+<!-- ===== Más ===== -->
+<section class="vista" id="v-mas" hidden>
+  <header><h1>Más</h1></header>
+  <div class="menu" style="margin-top:14px">
+    <button type="button" id="btnHistorial">Movimientos<small>Historial completo de gastos</small></button>
+    <button type="button" id="btnCategorias">Categorías<small>Crear, renombrar, fusionar y quitar</small></button>
+    <button type="button" id="btnCsv">Exportar CSV<small>Gastos e ingresos para Excel o Sheets</small></button>
+    <button type="button" id="btnRespaldo">Respaldo<small>Copiar o restaurar todos los datos</small></button>
+    <button type="button" id="btnCero" class="peligro">Empezar de cero<small>Borra gastos, ingresos, presupuestos y pagos</small></button>
+  </div>
+</section>
+
+<nav class="tabs" id="tabs" aria-label="Secciones">
+  <button type="button" data-tab="sobres"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Sobres</button>
+  <button type="button" data-tab="pres"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M16 11v4"/></svg>Presupuesto</button>
+  <button type="button" data-tab="caja"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></svg>Caja</button>
+  <button type="button" data-tab="tar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/></svg>Tarjetas</button>
+  <button type="button" data-tab="mas"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>Más</button>
+</nav>
 
 <div class="fondo" id="fondo"></div>
 
-<section class="hoja" id="hojaMonto" role="dialog" aria-modal="true" aria-labelledby="tMonto">
-  <h2 id="tMonto"></h2>
-  <p class="sub" id="sMonto"></p>
+<!-- ===== Hoja: registrar gasto ===== -->
+<section class="hoja" id="hojaReg" role="dialog" aria-modal="true" aria-labelledby="tReg">
+  <h2 id="tReg">Registrar gasto</h2>
+  <span class="etiq">CATEGORÍA</span>
+  <div class="chips" id="rCats"></div>
+  <span class="etiq">SUBCATEGORÍA</span>
+  <div class="chips" id="rSubs"></div>
+  <div class="formNueva" id="formNueva" hidden>
+    <label class="etiq" for="nsNombre" style="margin-top:0">NOMBRE</label>
+    <input type="text" id="nsNombre" autocomplete="off" placeholder="Claude">
+    <div class="chips" id="nsSug" style="margin-top:8px"></div>
+    <p class="aviso" id="nsAviso" hidden></p>
+    <label class="check"><input type="checkbox" id="nsCuotas"> Se paga en cuotas</label>
+    <div id="nsCuotasCampos" hidden>
+      <div class="dias">
+        <div><label class="etiq" for="nsCuotaMonto">MONTO DE CADA CUOTA</label>
+          <input type="number" id="nsCuotaMonto" inputmode="decimal" min="0" step="0.01"></div>
+        <div><label class="etiq" for="nsFin">ÚLTIMA CUOTA</label>
+          <input type="month" id="nsFin"></div>
+      </div>
+    </div>
+    <button class="principal" id="nsCrear" type="button">Crear subcategoría</button>
+  </div>
+  <p class="sub" id="rInfo" style="margin:12px 0 0"></p>
   <div class="cifra monto" id="pantalla">Q0</div>
   <div class="teclado" id="teclado">
     <button data-t="1">1</button><button data-t="2">2</button><button data-t="3">3</button>
@@ -208,79 +384,40 @@
   </div>
   <button type="button" class="lineaFecha" id="btnFecha"></button>
   <input type="date" id="inpFecha" hidden>
-  <p class="rotuloPago">¿Cómo lo pagaste?</p>
-  <div class="medios" id="medios"></div>
+  <span class="etiq">¿CÓMO LO PAGASTE?</span>
+  <div id="medios"></div>
   <p class="recuerdo" id="recuerdo"></p>
-  <div class="campoNota" id="cajaNota" hidden>
-    <label for="txtNota">¿De qué se trata?</label>
+  <p class="recuerdo" id="avisoCiclo"></p>
+  <div id="cajaNota" hidden>
+    <label class="etiq" for="txtNota">¿DE QUÉ SE TRATA?</label>
     <input type="text" id="txtNota" autocomplete="off">
   </div>
   <button class="secundaria" id="verNota" style="text-align:left;padding-left:0">+ agregar nota</button>
-  <button class="principal" id="btnGuardar" disabled>Guardar</button>
-  <button class="secundaria" id="btnSoloMonto" hidden>Solo guardar el monto esperado</button>
-  <button class="secundaria" data-cerrar>Cancelar</button>
+  <button class="principal" id="btnGuardar" disabled>Guardar gasto</button>
 </section>
 
-<section class="hoja" id="hojaAjustes" role="dialog" aria-modal="true" aria-labelledby="tAj">
-  <h2 id="tAj">Editar sobres y montos</h2>
-  <p class="sub" id="sAj"></p>
-  <div id="campos"></div>
-  <button class="txt" id="agregarCat" style="margin-top:16px">Agregar sobre</button>
-  <button class="principal" id="guardarAjustes">Guardar cambios</button>
-  <button class="secundaria" data-cerrar>Cancelar</button>
-</section>
-
+<!-- ===== Hoja: movimientos ===== -->
 <section class="hoja" id="hojaHist" role="dialog" aria-modal="true" aria-labelledby="tHist">
   <h2 id="tHist">Movimientos</h2>
   <p class="sub" id="sHist"></p>
   <div id="movimientos"></div>
-  <button class="secundaria" data-cerrar>Cerrar</button>
 </section>
 
-<section class="hoja" id="hojaCaja" role="dialog" aria-modal="true" aria-labelledby="tCaja">
-  <h2 id="tCaja">Ingresos y caja</h2>
-  <p class="sub" id="sCaja"></p>
-  <div id="cajaHoy"></div>
-  <div id="cajaProx"></div>
-  <div id="ingresosMes"></div>
-  <button class="txt" id="btnNuevoIngreso" style="margin-top:16px">Registrar un ingreso</button>
-  <div id="formIngreso" hidden style="margin-top:14px">
-    <label class="rotuloPago" for="inMonto">Monto</label>
-    <input type="number" id="inMonto" inputmode="decimal" min="0" step="0.01">
-    <label class="rotuloPago" for="inFuente">Fuente</label>
-    <select id="inFuente"></select>
-    <label class="rotuloPago" for="inFecha">Fecha</label>
-    <input type="date" id="inFecha">
-    <label class="rotuloPago" for="inNota">Nota (opcional)</label>
-    <input type="text" id="inNota" autocomplete="off">
-    <button class="principal" id="guardarIngreso">Guardar ingreso</button>
-  </div>
-  <p class="subrotulo">FUENTES DE INGRESO</p>
-  <div id="cfgFuentes"></div>
-  <button class="txt" id="agregarFuente" style="margin-top:12px">Agregar fuente</button>
-  <button class="principal" id="guardarFuentes">Guardar fuentes</button>
-  <button class="secundaria" data-cerrar>Cerrar</button>
+<!-- ===== Hoja: categorías ===== -->
+<section class="hoja" id="hojaCat" role="dialog" aria-modal="true" aria-labelledby="tCat">
+  <h2 id="tCat">Categorías</h2>
+  <p class="sub">Fijo: monto esperado cada mes. Variable: se registra y suma. Ahorro: se llena.</p>
+  <div id="cLista"></div>
+  <button class="txt" id="cNueva" style="margin-top:18px">+ Nueva categoría</button>
+  <button class="principal" id="cGuardar">Guardar cambios</button>
 </section>
 
-<section class="hoja" id="hojaTar" role="dialog" aria-modal="true" aria-labelledby="tTar">
-  <h2 id="tTar">Tarjetas</h2>
-  <p class="sub" id="sTar"></p>
-  <div id="porMedio"></div>
-  <div id="ciclos"></div>
-  <p class="subrotulo">CONFIGURACIÓN</p>
-  <p class="sub" style="margin-top:6px">El día del mes en que corta cada tarjeta y el día límite de pago.</p>
-  <div id="cfgTarjetas"></div>
-  <button class="txt" id="agregarTarjeta" style="margin-top:12px">Agregar tarjeta</button>
-  <button class="principal" id="guardarTarjetas">Guardar</button>
-  <button class="secundaria" data-cerrar>Cerrar</button>
-</section>
-
+<!-- ===== Hoja: respaldo ===== -->
 <section class="hoja" id="hojaResp" role="dialog" aria-modal="true" aria-labelledby="tResp">
   <h2 id="tResp">Respaldo</h2>
   <p class="sub">Los datos viven solo en este teléfono. Copiá el texto y guardalo donde quieras; pegalo aquí para restaurar.</p>
   <textarea id="areaResp" style="height:150px;font:13px/1.4 ui-monospace,Menlo,monospace"></textarea>
   <button class="principal" id="restaurar">Restaurar desde el texto</button>
-  <button class="secundaria" data-cerrar>Cerrar</button>
 </section>
 
 <script src="sobres.js"></script>

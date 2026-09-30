@@ -1,143 +1,126 @@
-/* Sobres · núcleo: datos, sobres, registro de gastos, ajustes, historial, CSV, respaldo.
-   Este archivo debe cargar ANTES que caja.js. */
+/* Sobres · núcleo: datos, categorías, subcategorías, registro, presupuesto,
+   movimientos, CSV y respaldo. Debe cargar ANTES que caja.js. */
 var APP = (function(){
   "use strict";
 
   var LLAVE = "sobres-v2";
-  var CASA  = "pilyrodriguez0-art.github.io";
 
-  if(location.protocol.indexOf("http") === 0 &&
-     location.hostname !== CASA && location.hostname !== "localhost" &&
-     location.hostname !== "127.0.0.1"){
-    location.replace("https://" + CASA + "/sobres/");
-  }
-
+  /* ---------- utilidades ---------- */
   var $ = function(i){ return document.getElementById(i); };
   function nid(){ return Math.random().toString(36).slice(2,9); }
-  function mesDe(f){ f = f || new Date(); return f.getFullYear()+"-"+String(f.getMonth()+1).padStart(2,"0"); }
+  function dos(n){ return String(n).padStart(2,"0"); }
+  function mesDe(f){ f = f || new Date(); return f.getFullYear()+"-"+dos(f.getMonth()+1); }
+  function aISO(d){ return d.getFullYear()+"-"+dos(d.getMonth()+1)+"-"+dos(d.getDate()); }
   function mesPrevio(k){
     var a = +k.slice(0,4), m = +k.slice(5,7) - 1;
     if(m < 1){ m = 12; a--; }
-    return a+"-"+String(m).padStart(2,"0");
+    return a+"-"+dos(m);
   }
   function mesSiguiente(k){
     var a = +k.slice(0,4), m = +k.slice(5,7) + 1;
     if(m > 12){ m = 1; a++; }
-    return a+"-"+String(m).padStart(2,"0");
+    return a+"-"+dos(m);
   }
   function mesesDesde(desde, hasta){
-    var out = [], a = +desde.slice(0,4), m = +desde.slice(5,7), g = 0;
-    while(g++ < 600){
-      var k = a+"-"+String(m).padStart(2,"0");
-      if(k >= hasta) break;
-      out.push(k); m++; if(m > 12){ m = 1; a++; }
-    }
+    var out = [], k = desde, g = 0;
+    while(k < hasta && g++ < 600){ out.push(k); k = mesSiguiente(k); }
     return out;
   }
+  function capital(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
   function nombreMes(k){
     var d = new Date(+k.slice(0,4), +k.slice(5,7)-1, 1);
-    var s = d.toLocaleDateString("es-GT",{month:"long", year:"numeric"});
-    return s.charAt(0).toUpperCase()+s.slice(1);
+    return capital(d.toLocaleDateString("es-GT",{month:"long", year:"numeric"}));
   }
   function soloMes(k){
     var d = new Date(+k.slice(0,4), +k.slice(5,7)-1, 1);
-    var s = d.toLocaleDateString("es-GT",{month:"long"});
-    return s.charAt(0).toUpperCase()+s.slice(1);
+    return capital(d.toLocaleDateString("es-GT",{month:"long"}));
   }
   function Q(n){
     var r = Math.round(n*100)/100;
     return "Q" + r.toLocaleString("es-GT",{minimumFractionDigits: r%1?2:0, maximumFractionDigits:2});
   }
-  function diaCorto(f){
-    return f ? new Date(f).toLocaleDateString("es-GT",{day:"numeric",month:"short"}) : "";
-  }
-  function diaLargo(f){
-    return f ? f.toLocaleDateString("es-GT",{day:"numeric",month:"long"}) : "";
+  function diaCorto(f){ return f ? new Date(f).toLocaleDateString("es-GT",{day:"numeric",month:"short"}) : ""; }
+  function diaLargo(f){ return f ? f.toLocaleDateString("es-GT",{day:"numeric",month:"long"}) : ""; }
+  function norm(s){
+    return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
   }
 
-  var SECCIONES = [
-    {id:"fijos",      titulo:"Fijos"},
-    {id:"salud",      titulo:"Salud"},
-    {id:"compras",    titulo:"Compras"},
-    {id:"transporte", titulo:"Transporte"},
-    {id:"personales", titulo:"Personales"},
-    {id:"ahorro",     titulo:"Ahorro"}
+  /* ---------- estructura base ---------- */
+  var CATS_BASE = [
+    {id:"c-fijos",   nombre:"Fijos",       comp:"fijo"},
+    {id:"c-memb",    nombre:"Membresías",  comp:"fijo"},
+    {id:"c-salud",   nombre:"Salud",       comp:"variable"},
+    {id:"c-compras", nombre:"Compras",     comp:"variable"},
+    {id:"c-trans",   nombre:"Transporte",  comp:"variable"},
+    {id:"c-pers",    nombre:"Personales",  comp:"variable"},
+    {id:"c-ahorro",  nombre:"Ahorro",      comp:"ahorro"}
   ];
-
-  var SEMILLA = {
-    fijos:      ["Renta","Luz","Agua","Internet","Teléfono","Seguro médico"],
-    salud:      ["Medicación","Otras medicinas","Sesión psicóloga","Sesión psiquiatra"],
-    compras:    ["Mercado","Supermercado"],
-    transporte: ["Uber","Transporte"],
-    personales: ["Comida fuera","Ropa","Clases de capoeira","Paseos","Salidas con amigos",
-                 "Artículos varios","Donaciones","Regalos","Imprevistos"],
-    ahorro:     ["Ahorro"]
+  /* Subcategorías con que arranca quien ya usaba la versión anterior. */
+  var SUBS_MIGRACION = {
+    "c-fijos":   ["Renta","Luz","Agua","Internet","Teléfono","Seguro médico"],
+    "c-salud":   ["Medicación"],
+    "c-compras": ["Mercado","Supermercado"],
+    "c-trans":   ["Uber"],
+    "c-ahorro":  ["Ahorro"]
   };
-
-  var MEDIOS_BASE = ["Efectivo","Débito","Transferencia"];
-  function medios(){
-    return MEDIOS_BASE.concat((datos && datos.tarjetas ? datos.tarjetas : [])
-      .map(function(t){ return t.nombre; })
-      .filter(function(n){ return !!n; }));
-  }
+  var MEDIOS_BASE = ["Efectivo","Transferencia"];
 
   var datos = null;
 
-  function nuevaCat(nombre, seccion, tipo, extra){
-    var c = {id:nid(), nombre:nombre, seccion:seccion, tipo:tipo || "gasto",
-             arrastra:false, pideNota:false, cuotas:null};
-    if(extra){ for(var k in extra){ c[k] = extra[k]; } }
-    return c;
+  function copiaCats(){ return CATS_BASE.map(function(c){ return {id:c.id, nombre:c.nombre, comp:c.comp}; }); }
+  function nuevaSub(catId, nombre, comp){
+    return {id:nid(), catId:catId, nombre:nombre, arrastra:(comp === "variable"), pideNota:false, cuotas:null};
+  }
+  function fuentesIniciales(){
+    return [{id:"f-sueldo",nombre:"Sueldo"},{id:"f-indep",nombre:"Trabajo independiente"},
+            {id:"f-venta",nombre:"Ventas"},{id:"f-otro",nombre:"Otros"}];
   }
 
   function sembrar(){
-    var cats = [], mes = mesDe();
-    SEMILLA.fijos.forEach(function(n){ cats.push(nuevaCat(n, "fijos", "fijo")); });
-    cats.push(nuevaCat("Sillón", "fijos", "fijo", {cuotas:{hasta:"2027-01"}}));
-    SEMILLA.salud.forEach(function(n){ cats.push(nuevaCat(n, "salud", "gasto", {arrastra:true})); });
-    SEMILLA.compras.forEach(function(n){ cats.push(nuevaCat(n, "compras", "gasto", {arrastra:true})); });
-    SEMILLA.transporte.forEach(function(n){ cats.push(nuevaCat(n, "transporte")); });
-    SEMILLA.personales.forEach(function(n){
-      cats.push(nuevaCat(n, "personales", "gasto", {pideNota: (n === "Regalos" || n === "Imprevistos")}));
-    });
-    SEMILLA.ahorro.forEach(function(n){ cats.push(nuevaCat(n, "ahorro", "ahorro")); });
-
+    var hoy = new Date();
     return {
-      v:6, inicio:mes, visto:mes,
-      categorias: cats,
-      presupuestos: {}, movimientos: [], plegados: {},
-      ingresos: [], cortesPagados: {},
-      fuentes: [
-        {id:"f-sueldo", nombre:"Sueldo"},
-        {id:"f-indep",  nombre:"Trabajo independiente"},
-        {id:"f-venta",  nombre:"Ventas"},
-        {id:"f-otro",   nombre:"Otros"}
+      v:8, inicio:mesDe(), visto:mesDe(), inicioRegistro:aISO(hoy),
+      categorias: copiaCats(), subs: [],
+      presupuestos:{}, movimientos:[], ingresos:[], fuentes:fuentesIniciales(),
+      tarjetas:[
+        {id:nid(), nombre:"Tarjeta de crédito", tipo:"credito", red:"Visa", color:null, corte:null, pago:null},
+        {id:nid(), nombre:"Tarjeta de débito",  tipo:"debito",  red:"Visa", color:null, corte:null, pago:null}
       ],
-      tarjetas: [
-        {id:"t-visa", nombre:"Visa", corte:21, pago:15},
-        {id:"t-mc",   nombre:"Mastercard", corte:21, pago:15}
-      ]
+      pagosTarjeta:[], montosCorte:{}, cortesPagados:{}, plegados:{}
     };
   }
 
-  /* Junta los rubros de un grupo viejo en un solo sobre y conserva sus movimientos. */
-  function migrarAgrupados(){
-    if(!datos.grupos || !datos.grupos.length) return;
-    datos.grupos.forEach(function(g){
-      var hijos = datos.categorias.filter(function(c){ return c.grupo === g.id; });
-      var ya = datos.categorias.filter(function(c){ return c.id === g.id; })[0];
-      if(!ya){
-        datos.categorias.push({
-          id:g.id, nombre:g.nombre, seccion:"compras", tipo:"gasto",
-          arrastra:true, pideNota:false, cuotas:null
-        });
-      }
-      var ids = {};
-      hijos.forEach(function(h){ ids[h.id] = true; });
-      datos.movimientos.forEach(function(m){ if(ids[m.catId]){ m.catId = g.id; } });
-      datos.categorias = datos.categorias.filter(function(c){ return !ids[c.id]; });
+  /* De la versión de sobres sueltos a categorías con subcategorías, arrancando en cero. */
+  function migrarV8(){
+    var tarjetas = (datos.tarjetas || []).map(function(t){
+      return {id:t.id || nid(), nombre:t.nombre, tipo:t.tipo || "credito",
+              red:t.red || (t.nombre === "Mastercard" ? "Mastercard" : "Visa"),
+              color:(t.color === undefined ? null : t.color),
+              corte:(datos.v >= 7 ? t.corte : null), pago:(datos.v >= 7 ? t.pago : null)};
     });
-    delete datos.grupos;
+    if(!tarjetas.some(function(t){ return t.tipo === "debito"; })){
+      tarjetas.push({id:nid(), nombre:"Débito", tipo:"debito", red:"Visa", color:null, corte:null, pago:null});
+    }
+    var cats = copiaCats(), subs = [];
+    cats.forEach(function(c){
+      (SUBS_MIGRACION[c.id] || []).forEach(function(n){ subs.push(nuevaSub(c.id, n, c.comp)); });
+    });
+    datos = {
+      v:8, inicio:mesDe(), visto:mesDe(), inicioRegistro:"2026-10-01",
+      categorias:cats, subs:subs,
+      presupuestos:{}, movimientos:[], ingresos:[],
+      fuentes:(datos.fuentes && datos.fuentes.length) ? datos.fuentes : fuentesIniciales(),
+      tarjetas:tarjetas, pagosTarjeta:[], montosCorte:{}, cortesPagados:{}, plegados:{}
+    };
+  }
+
+  function normalizar(){
+    ["presupuestos","montosCorte","cortesPagados","plegados"].forEach(function(k){ if(!datos[k]){ datos[k] = {}; } });
+    ["movimientos","ingresos","pagosTarjeta","subs","tarjetas"].forEach(function(k){ if(!datos[k]){ datos[k] = []; } });
+    if(!datos.fuentes){ datos.fuentes = fuentesIniciales(); }
+    if(!datos.categorias || !datos.categorias.length){ datos.categorias = copiaCats(); }
+    if(!datos.inicio){ datos.inicio = mesDe(); }
+    if(!datos.inicioRegistro){ datos.inicioRegistro = aISO(new Date()); }
   }
 
   function cargar(){
@@ -145,101 +128,129 @@ var APP = (function(){
       var crudo = localStorage.getItem(LLAVE);
       if(crudo){ datos = JSON.parse(crudo); }
     }catch(e){ datos = null; }
-    if(!datos || !datos.categorias || !datos.categorias.length){ datos = sembrar(); return; }
-
-    if(!datos.presupuestos){ datos.presupuestos = {}; }
-    if(!datos.movimientos){ datos.movimientos = []; }
-    if(!datos.plegados){ datos.plegados = {}; }
-    if(!datos.ingresos){ datos.ingresos = []; }
-    if(!datos.cortesPagados){ datos.cortesPagados = {}; }
-    if(!datos.inicio){ datos.inicio = mesDe(); }
-    if(!datos.fuentes){
-      datos.fuentes = [
-        {id:"f-sueldo", nombre:"Sueldo"},
-        {id:"f-indep",  nombre:"Trabajo independiente"},
-        {id:"f-venta",  nombre:"Ventas"},
-        {id:"f-otro",   nombre:"Otros"}
-      ];
-    }
-    if(!datos.tarjetas){
-      datos.tarjetas = [
-        {id:"t-visa", nombre:"Visa", corte:21, pago:15},
-        {id:"t-mc",   nombre:"Mastercard", corte:21, pago:15}
-      ];
-    }
-
-    if(!datos.v || datos.v < 6){
-      datos.categorias.forEach(function(c){
-        if(c.nombre === "Uber" || c.nombre === "Transporte"){ c.seccion = "transporte"; }
-        if(c.nombre === "Comida fuera"){ c.seccion = "personales"; }
-        if(c.seccion === "variables"){ c.seccion = "personales"; }
-      });
-      migrarAgrupados();
-      /* la forma de pago habitual por sobre ya no se usa */
-      datos.categorias.forEach(function(c){ delete c.medio; delete c.grupo; });
-      datos.v = 6;
-    }
+    if(!datos){ datos = sembrar(); return; }
+    if(!datos.v || datos.v < 8){ migrarV8(); }
+    normalizar();
   }
-
   function guardar(){
     try{ localStorage.setItem(LLAVE, JSON.stringify(datos)); }
     catch(e){ alert("No se pudo guardar. Puede que el almacenamiento esté lleno."); }
   }
 
-  /* ---------- presupuestos y saldos ---------- */
-  function presu(catId, mes){
+  /* ---------- consultas ---------- */
+  function catDe(id){ return datos.categorias.filter(function(c){ return c.id === id; })[0] || null; }
+  function subDe(id){ return datos.subs.filter(function(s){ return s.id === id; })[0] || null; }
+  function cuotaActiva(s, mes){ return !s.cuotas || !s.cuotas.hasta || mes <= s.cuotas.hasta; }
+  function subsDe(catId, mes){
+    mes = mes || mesDe();
+    return datos.subs.filter(function(s){ return s.catId === catId && cuotaActiva(s, mes); });
+  }
+  function compDe(s){
+    if(s.cuotas) return "fijo";
+    var c = catDe(s.catId);
+    return c ? c.comp : "variable";
+  }
+  function presu(id, mes){
     var p = datos.presupuestos[mes];
-    return (p && typeof p[catId] === "number") ? p[catId] : 0;
+    return (p && typeof p[id] === "number") ? p[id] : 0;
   }
-  function ponerPresu(catId, mes, monto){
+  function ponerPresu(id, mes, monto){
     if(!datos.presupuestos[mes]){ datos.presupuestos[mes] = {}; }
-    datos.presupuestos[mes][catId] = monto;
+    if(monto > 0){ datos.presupuestos[mes][id] = monto; }
+    else { delete datos.presupuestos[mes][id]; }
   }
-  function gastado(catId, mes){
+  function gastadoSub(id, mes){
     var s = 0;
-    for(var i=0;i<datos.movimientos.length;i++){
-      var m = datos.movimientos[i];
-      if(m.catId === catId && (!mes || m.fecha.slice(0,7) === mes)){ s += m.monto; }
-    }
+    datos.movimientos.forEach(function(m){
+      if(m.subId === id && (!mes || m.fecha.slice(0,7) === mes)){ s += m.monto; }
+    });
     return s;
   }
-  function arrastre(c){
-    if(!c.arrastra || c.tipo === "ahorro") return 0;
-    var s = 0, ms = mesesDesde(datos.inicio, mesDe());
-    for(var i=0;i<ms.length;i++){
-      var p = presu(c.id, ms[i]);
-      if(p > 0){ s += p - gastado(c.id, ms[i]); }
-    }
+  function gastadoCat(catId, mes){
+    var ids = {};
+    datos.subs.forEach(function(s){ if(s.catId === catId){ ids[s.id] = true; } });
+    var s = 0;
+    datos.movimientos.forEach(function(m){
+      if(ids[m.subId] && (!mes || m.fecha.slice(0,7) === mes)){ s += m.monto; }
+    });
     return s;
   }
-  function disponible(c, mes){ return presu(c.id, mes) + arrastre(c); }
-
-  function cuotasRestantes(c){
-    if(!c.cuotas || !c.cuotas.hasta) return null;
+  function esperado(s, mes){
+    var p = presu(s.id, mes);
+    if(p > 0) return p;
+    return (s.cuotas && cuotaActiva(s, mes)) ? (s.cuotas.monto || 0) : 0;
+  }
+  function arrastre(s){
+    if(!s.arrastra || compDe(s) !== "variable") return 0;
+    var t = 0, ms = mesesDesde(datos.inicio, mesDe());
+    ms.forEach(function(k){
+      var p = presu(s.id, k);
+      if(p > 0){ t += p - gastadoSub(s.id, k); }
+    });
+    return t;
+  }
+  function disponible(s, mes){ return presu(s.id, mes) + arrastre(s); }
+  function cuotasRestantes(s){
+    if(!s.cuotas || !s.cuotas.hasta) return null;
     var mes = mesDe();
-    if(mes > c.cuotas.hasta) return 0;
-    var n = mesesDesde(mes, c.cuotas.hasta).length + 1;
-    if(gastado(c.id, mes) > 0){ n -= 1; }
+    if(mes > s.cuotas.hasta) return 0;
+    var n = mesesDesde(mes, s.cuotas.hasta).length + 1;
+    if(gastadoSub(s.id, mes) > 0){ n -= 1; }
     return n;
   }
+  /* Referencia de una categoría: su tope, o si no tiene, lo que suman sus subcategorías. */
+  function refCat(c, mes){
+    var p = presu(c.id, mes);
+    if(p > 0) return p;
+    return subsDe(c.id, mes).reduce(function(t, s){
+      return t + (compDe(s) === "fijo" ? esperado(s, mes) : presu(s.id, mes));
+    }, 0);
+  }
 
-  /* Cómo pagó este sobre las últimas veces. */
-  function recuerdoDePago(c){
-    var ult = datos.movimientos
-      .filter(function(m){ return m.catId === c.id && m.medio; })
-      .sort(function(a,b){ return a.fecha < b.fecha ? 1 : -1; })
-      .slice(0, 6);
-    if(ult.length < 2) return "";
-    var cuenta = {};
-    ult.forEach(function(m){ cuenta[m.medio] = (cuenta[m.medio] || 0) + 1; });
-    var top = null;
-    Object.keys(cuenta).forEach(function(k){
-      if(!top || cuenta[k] > top.n){ top = {medio:k, n:cuenta[k]}; }
+  /* ---------- tarjetas: color y dibujo ---------- */
+  var HUES = [0,340,280,215,185,145,48,25,-1];
+  var LUCES = [86,72,58,44,30];
+  function colorFondo(col){
+    if(!col) return "#9A9A96";
+    return col.h < 0 ? "hsl(30,4%," + col.l + "%)" : "hsl(" + col.h + ",55%," + col.l + "%)";
+  }
+  function colorTexto(col){
+    if(!col) return "#FFFFFF";
+    if(col.l >= 58){ return col.h < 0 ? "hsl(30,6%,18%)" : "hsl(" + col.h + ",45%,18%)"; }
+    return "#FFFFFF";
+  }
+  function tarjetaNodo(t, chica){
+    var d = document.createElement("div");
+    d.className = "tarjeta" + (chica ? " chica" : "");
+    d.style.background = colorFondo(t.color);
+    d.style.color = colorTexto(t.color);
+    [["tNom", t.nombre || "Sin nombre"], ["tChip", ""],
+     ["tTipo", t.tipo === "debito" ? "Débito" : "Crédito"], ["tRed", t.red || ""]].forEach(function(p){
+      var e = document.createElement("div");
+      e.className = p[0]; e.textContent = p[1];
+      d.appendChild(e);
     });
+    return d;
+  }
+  function medios(){
+    return (datos.tarjetas || []).map(function(t){ return t.nombre; })
+      .filter(function(n){ return !!n; }).concat(MEDIOS_BASE);
+  }
+  function tarjetaPorNombre(n){
+    return (datos.tarjetas || []).filter(function(t){ return t.nombre === n; })[0] || null;
+  }
+  function esCredito(n){ var t = tarjetaPorNombre(n); return !!(t && t.tipo === "credito"); }
+
+  function recuerdoDePago(subId){
+    var ult = datos.movimientos
+      .filter(function(m){ return m.subId === subId && m.medio; })
+      .sort(function(a,b){ return a.fecha < b.fecha ? 1 : -1; }).slice(0, 6);
+    if(ult.length < 2) return "";
+    var cuenta = {}, top = null;
+    ult.forEach(function(m){ cuenta[m.medio] = (cuenta[m.medio] || 0) + 1; });
+    Object.keys(cuenta).forEach(function(k){ if(!top || cuenta[k] > top.n){ top = {medio:k, n:cuenta[k]}; } });
     if(!top || top.n / ult.length < 0.6) return "";
-    if(top.n === ult.length){
-      return "Las últimas " + ult.length + " veces pagaste con " + top.medio + ".";
-    }
+    if(top.n === ult.length){ return "Las últimas " + ult.length + " veces pagaste con " + top.medio + "."; }
     return "Solés pagarlo con " + top.medio + " (" + top.n + " de las últimas " + ult.length + ").";
   }
 
@@ -256,7 +267,56 @@ var APP = (function(){
     return copiado;
   }
 
-  /* ---------- pintado ---------- */
+  /* ---------- pestañas y hojas ---------- */
+  var alMostrar = {};
+  var tabActual = "sobres";
+  function mostrarTab(k){
+    tabActual = k;
+    ["sobres","pres","caja","tar","mas"].forEach(function(x){ $("v-" + x).hidden = (x !== k); });
+    Array.prototype.forEach.call($("tabs").querySelectorAll("button"), function(b){
+      if(b.getAttribute("data-tab") === k){ b.setAttribute("aria-current","page"); }
+      else { b.removeAttribute("aria-current"); }
+    });
+    if(k === "sobres"){ pintar(); }
+    if(k === "pres"){ pintarPres(); }
+    if(alMostrar[k]){ alMostrar[k](); }
+    window.scrollTo(0, 0);
+  }
+  $("tabs").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-tab]");
+    if(b){ mostrarTab(b.getAttribute("data-tab")); }
+  });
+
+  var HOJAS = ["hojaReg","hojaHist","hojaCat","hojaResp"];
+  function abrir(id){ $("fondo").classList.add("ver"); $(id).classList.add("ver"); $(id).scrollTop = 0; }
+  function cerrarTodo(){
+    $("fondo").classList.remove("ver");
+    HOJAS.forEach(function(h){ $(h).classList.remove("ver"); });
+  }
+  $("fondo").addEventListener("click", cerrarTodo);
+
+  var ACCION_ARRIBA = { hojaCat: "cGuardar" };
+  HOJAS.forEach(function(id){
+    var h = $(id), titulo = h.querySelector("h2");
+    var barra = document.createElement("div");
+    barra.className = "barraHoja";
+    var atras = document.createElement("button");
+    atras.type = "button"; atras.className = "atras";
+    atras.setAttribute("aria-label", "Volver");
+    atras.textContent = "\u2190";
+    atras.addEventListener("click", cerrarTodo);
+    barra.appendChild(atras);
+    h.insertBefore(barra, h.firstChild);
+    barra.appendChild(titulo);
+    if(ACCION_ARRIBA[id]){
+      var g = document.createElement("button");
+      g.type = "button"; g.className = "guarda"; g.textContent = "Guardar";
+      g.addEventListener("click", function(){ $(ACCION_ARRIBA[id]).click(); });
+      barra.appendChild(g);
+    }
+  });
+
+  /* ---------- pantalla: sobres ---------- */
   function filaHTML(){
     var b = document.createElement("button");
     b.className = "fila";
@@ -264,19 +324,17 @@ var APP = (function(){
                   '<span class="barra"><i></i></span><span class="nota"></span>';
     return b;
   }
-  function sinBarra(b){
-    var x = b.querySelector(".barra");
-    if(x){ x.remove(); }
-  }
+  function sinBarra(b){ var x = b.querySelector(".barra"); if(x){ x.remove(); } }
 
-  function nodoCat(c, mes){
+  function nodoSub(s, mes){
     var b = filaHTML();
-    b.setAttribute("data-cat", c.id);
-    b.querySelector(".nom").textContent = c.nombre;
+    b.setAttribute("data-sub", s.id);
+    b.querySelector(".nom").textContent = s.nombre;
     var val = b.querySelector(".val"), nota = b.querySelector(".nota"), rell = b.querySelector("i");
+    var comp = compDe(s);
 
-    if(c.tipo === "ahorro"){
-      var junta = gastado(c.id, null), meta = presu(c.id, mes);
+    if(comp === "ahorro"){
+      var junta = gastadoSub(s.id, null), meta = presu(s.id, mes);
       val.textContent = Q(junta);
       rell.style.width = (meta > 0 ? Math.min(1, junta/meta)*100 : 0) + "%";
       nota.textContent = meta > 0
@@ -285,126 +343,135 @@ var APP = (function(){
       return b;
     }
 
-    var g = gastado(c.id, mes), p = presu(c.id, mes), disp = disponible(c, mes);
+    var g = gastadoSub(s.id, mes);
 
-    if(c.tipo === "fijo"){
-      var cuot = cuotasRestantes(c);
-      var pagado = g > 0, t;
+    if(comp === "fijo"){
+      var esp = esperado(s, mes), cuot = cuotasRestantes(s), pagado = g > 0, t;
       if(pagado){ b.className += " pagado"; }
-      val.textContent = pagado ? Q(g) : (p > 0 ? Q(p) : "—");
+      val.textContent = pagado ? Q(g) : (esp > 0 ? Q(esp) : "—");
       sinBarra(b);
       if(pagado){
         var ult = null;
         datos.movimientos.forEach(function(m){
-          if(m.catId === c.id && m.fecha.slice(0,7) === mes){
-            if(!ult || m.fecha > ult){ ult = m.fecha; }
-          }
+          if(m.subId === s.id && m.fecha.slice(0,7) === mes && (!ult || m.fecha > ult)){ ult = m.fecha; }
         });
         t = "pagado" + (ult ? " el " + diaCorto(ult) : "");
       }else{
-        t = (p > 0 ? "por pagar" : "sin monto · tocá para registrar");
+        t = esp > 0 ? "por pagar · esperado " + Q(esp) : "sin monto esperado";
       }
       if(cuot !== null && cuot > 0){ t += " · quedan " + cuot + (cuot === 1 ? " cuota" : " cuotas"); }
-      if(!pagado && p > 0){ t += " · esperado " + Q(p); }
       nota.textContent = t;
       return b;
     }
 
-    if(p <= 0 && arrastre(c) === 0){
+    var p = presu(s.id, mes), arr = arrastre(s), disp = p + arr;
+    if(p <= 0 && arr === 0){
       val.textContent = Q(g);
       sinBarra(b);
       nota.textContent = g > 0 ? "llevás gastado · sin monto" : "sin movimientos este mes";
       return b;
     }
-
     var queda = disp - g;
     if(queda < 0){ b.className += " pasado"; }
     val.textContent = Q(Math.max(queda, 0));
     rell.style.width = (disp > 0 ? Math.max(0, Math.min(1, queda/disp))*100 : 100) + "%";
-    var arr = arrastre(c), txt;
-    txt = queda >= 0 ? "te quedan de " + Q(disp) : "te pasaste por " + Q(-queda) + " de " + Q(disp);
+    var txt = queda >= 0 ? "te quedan de " + Q(disp) : "te pasaste por " + Q(-queda) + " de " + Q(disp);
     if(Math.round(arr) > 0){ txt += " (Q" + Math.round(arr) + " arrastrados)"; }
     else if(Math.round(arr) < 0){ txt += " (Q" + Math.round(-arr) + " de saldo negativo)"; }
-    txt += " · llevás " + Q(g);
-    nota.textContent = txt;
+    nota.textContent = txt + " · llevás " + Q(g);
     return b;
   }
 
   function pintar(){
     var mes = mesDe();
-    var hoyTxt = new Date().toLocaleDateString("es-GT",{day:"numeric",month:"long",year:"numeric"});
-    $("mes").textContent = hoyTxt.charAt(0).toUpperCase() + hoyTxt.slice(1);
+    $("fechaHoy").textContent = capital(new Date().toLocaleDateString("es-GT",{day:"numeric",month:"long",year:"numeric"}));
     var tab = $("tablero");
     tab.innerHTML = "";
-    var totalDisp = 0, totalGas = 0, pasados = 0, fijosPend = 0;
+    var totalRef = 0, totalGas = 0, pasados = 0, fijosPend = 0;
 
-    SECCIONES.forEach(function(sec){
-      var propias = datos.categorias.filter(function(c){ return c.seccion === sec.id; });
-      if(!propias.length) return;
+    datos.categorias.forEach(function(c){
+      var subs = subsDe(c.id, mes);
+      var ref = refCat(c, mes);
+      var gas = c.comp === "ahorro"
+        ? subs.reduce(function(t, s){ return t + gastadoSub(s.id, null); }, 0)
+        : gastadoCat(c.id, mes);
 
-      var secGas = 0, secPre = 0, cuantos = 0;
+      if(c.comp !== "ahorro"){
+        totalRef += ref; totalGas += gastadoCat(c.id, mes);
+        if(ref > 0 && gas > ref){ pasados++; }
+      }
+
       var cont = document.createElement("div");
       cont.className = "contenido";
-
-      propias.forEach(function(c){
-        if(c.tipo === "fijo" && cuotasRestantes(c) === 0) return;
-        if(c.tipo === "fijo" && gastado(c.id, mes) === 0 && presu(c.id, mes) > 0){ fijosPend++; }
-        cont.appendChild(nodoCat(c, mes));
-        cuantos++;
-        var g = gastado(c.id, mes);
-        secGas += g; secPre += presu(c.id, mes);
-        if(c.tipo !== "ahorro" && presu(c.id, mes) > 0){
-          totalDisp += disponible(c, mes); totalGas += g;
-          if(disponible(c, mes) - g < 0){ pasados++; }
-        }
+      subs.forEach(function(s){
+        cont.appendChild(nodoSub(s, mes));
+        var comp = compDe(s);
+        if(comp === "fijo" && gastadoSub(s.id, mes) === 0 && esperado(s, mes) > 0){ fijosPend++; }
+        if(comp === "variable" && presu(s.id, mes) > 0 && disponible(s, mes) - gastadoSub(s.id, mes) < 0){ pasados++; }
       });
+      var ag = document.createElement("button");
+      ag.type = "button"; ag.className = "agregar";
+      ag.setAttribute("data-agregar", c.id);
+      ag.textContent = "+ agregar en " + c.nombre;
+      cont.appendChild(ag);
 
-      var plegada = datos.plegados["sec-" + sec.id] !== false;
-      if(plegada){ cont.style.display = "none"; }
+      var plegada = datos.plegados["cat-" + c.id] !== false;
+      if(plegada){ cont.hidden = true; }
 
       var cab = filaHTML();
       cab.className = "fila seccion";
-      cab.setAttribute("data-seccion", sec.id);
+      cab.setAttribute("data-cat", c.id);
       cab.setAttribute("aria-expanded", plegada ? "false" : "true");
-      cab.querySelector(".nom").textContent = sec.titulo;
+      cab.querySelector(".nom").textContent = c.nombre;
       var chev = document.createElement("span");
-      chev.className = "chev";
-      chev.textContent = plegada ? "▸" : "▾";
+      chev.className = "chev"; chev.textContent = plegada ? "▸" : "▾";
       cab.querySelector(".nom").appendChild(chev);
-      cab.querySelector(".val").textContent = Q(secGas);
+      cab.querySelector(".val").textContent = Q(gas);
       sinBarra(cab);
-      cab.querySelector(".nota").textContent = secPre > 0
-        ? "gastado · de " + Q(secPre) + " presupuestados · " + cuantos + " sobres"
-        : "gastado · sin montos · " + cuantos + " sobres";
-      if(secPre > 0 && secGas > secPre){ cab.className += " pasado"; }
+      var n = subs.length;
+      var cuenta = n ? n + (n === 1 ? " subcategoría" : " subcategorías") : "sin subcategorías";
+      var etiqueta = c.comp === "ahorro" ? "juntado" : "gastado";
+      cab.querySelector(".nota").textContent = ref > 0
+        ? etiqueta + " · de " + Q(ref) + " · " + cuenta
+        : etiqueta + " · " + c.comp + " · " + cuenta;
+      if(c.comp !== "ahorro" && ref > 0 && gas > ref){ cab.className += " pasado"; }
 
       tab.appendChild(cab);
       tab.appendChild(cont);
     });
+    if(tab.lastElementChild){ tab.lastElementChild.style.borderBottom = "1px solid var(--linea)"; }
 
-    var gastoMes = 0;
-    datos.movimientos.forEach(function(m){
-      if(m.fecha.slice(0,7) !== mes) return;
-      var c = datos.categorias.filter(function(x){ return x.id === m.catId; })[0];
-      if(c && c.tipo === "ahorro") return;
-      gastoMes += m.monto;
-    });
-
-    $("totalQueda").textContent = Q(gastoMes);
+    $("totalGasto").textContent = Q(totalGas);
     var pie = ["llevás gastado este mes"];
-    if(pasados){ pie.push(pasados + (pasados === 1 ? " sobre pasado" : " sobres pasados")); }
+    if(pasados){ pie.push(pasados + (pasados === 1 ? " pasado" : " pasados")); }
     if(fijosPend){ pie.push(fijosPend + (fijosPend === 1 ? " fijo por pagar" : " fijos por pagar")); }
     $("totalPie").textContent = pie.join(" · ");
 
-    var seg = totalDisp > 0
-      ? "Te quedan " + Q(Math.max(totalDisp - totalGas, 0)) + " de " + Q(totalDisp) + " presupuestados"
+    var seg = totalRef > 0
+      ? "Te quedan " + Q(Math.max(totalRef - totalGas, 0)) + " de " + Q(totalRef) + " presupuestados"
       : "Todavía no asignaste montos";
-    var ing = datos.ingresos.reduce(function(s,i){
-      return i.fecha.slice(0,7) === mes ? s + i.monto : s;
-    }, 0);
-    if(ing > 0){ seg += " · entraron " + Q(ing) + " este mes"; }
+    var ing = datos.ingresos.reduce(function(t, i){ return i.fecha.slice(0,7) === mes ? t + i.monto : t; }, 0);
+    if(ing > 0){ seg += " · entraron " + Q(ing); }
     $("totalSegunda").textContent = seg;
   }
+
+  $("tablero").addEventListener("click", function(e){
+    var ag = e.target.closest("button[data-agregar]");
+    if(ag){ abrirRegistro(ag.getAttribute("data-agregar"), null, true); return; }
+    var sec = e.target.closest("button.seccion");
+    if(sec){
+      var k = "cat-" + sec.getAttribute("data-cat");
+      datos.plegados[k] = datos.plegados[k] === false ? true : false;
+      guardar(); pintar();
+      return;
+    }
+    var f = e.target.closest("button[data-sub]");
+    if(f){
+      var s = subDe(f.getAttribute("data-sub"));
+      if(s){ abrirRegistro(s.catId, s.id, false); }
+    }
+  });
+  $("btnRegistrar").addEventListener("click", function(){ abrirRegistro(null, null, false); });
 
   function aviso(texto, accion, etiqueta){
     var d = document.createElement("div");
@@ -427,286 +494,531 @@ var APP = (function(){
     $("avisos").appendChild(d);
   }
 
-  /* ---------- hojas ---------- */
-  var HOJAS = ["hojaMonto","hojaAjustes","hojaHist","hojaCaja","hojaTar","hojaResp"];
-  function abrir(id){ $("fondo").classList.add("ver"); $(id).classList.add("ver"); }
-  function cerrarTodo(){
-    $("fondo").classList.remove("ver");
-    HOJAS.forEach(function(h){ var e = $(h); if(e){ e.classList.remove("ver"); } });
-    activa = null;
-  }
-  $("fondo").addEventListener("click", cerrarTodo);
-  Array.prototype.forEach.call(document.querySelectorAll("[data-cerrar]"), function(b){
-    b.addEventListener("click", cerrarTodo);
-  });
+  /* ---------- registrar gasto ---------- */
+  var reg = {catId:null, subId:null, buffer:"", medio:null, fecha:new Date()};
 
-  /* ---------- barra superior de cada hoja ---------- */
-  var ACCION_ARRIBA = { hojaAjustes: "guardarAjustes", hojaTar: "guardarTarjetas" };
-  function armarBarras(){
-    HOJAS.forEach(function(id){
-      var h = $(id);
-      if(!h || h.querySelector(".barraHoja")) return;
-      var titulo = h.querySelector("h2");
-      if(!titulo) return;
-      var barra = document.createElement("div");
-      barra.className = "barraHoja";
-      var atras = document.createElement("button");
-      atras.type = "button";
-      atras.className = "atras";
-      atras.setAttribute("aria-label", "Volver a los sobres");
-      atras.textContent = "\u2190";
-      atras.addEventListener("click", function(){ cerrarTodo(); });
-      barra.appendChild(atras);
-      h.insertBefore(barra, h.firstChild);
-      barra.appendChild(titulo);
-      var destino = ACCION_ARRIBA[id];
-      if(destino && $(destino)){
-        var g = document.createElement("button");
-        g.type = "button";
-        g.className = "guarda";
-        g.textContent = "Guardar";
-        g.addEventListener("click", function(){ $(destino).click(); });
-        barra.appendChild(g);
-      }
-    });
-  }
-  armarBarras();
-
-  /* ---------- registro ---------- */
-  var activa = null, buffer = "", medio = null, fechaMov = null;
-
-  function aISO(d){
-    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") +
-           "-" + String(d.getDate()).padStart(2,"0");
-  }
   function esHoy(d){ return aISO(d) === aISO(new Date()); }
+
+  function abrirRegistro(catId, subId, nueva){
+    reg = {catId:catId, subId:subId, buffer:"", medio:null, fecha:new Date()};
+    $("formNueva").hidden = !nueva;
+    $("nsNombre").value = ""; $("nsCuotas").checked = false;
+    $("nsCuotasCampos").hidden = true; $("nsCuotaMonto").value = ""; $("nsFin").value = "";
+    $("nsAviso").hidden = true; $("nsSug").innerHTML = "";
+    $("txtNota").value = "";
+    $("inpFecha").hidden = true;
+    precargar();
+    pintarReg();
+    abrir("hojaReg");
+    if(nueva){ setTimeout(function(){ $("nsNombre").focus(); }, 300); }
+  }
+
+  function precargar(){
+    var s = reg.subId ? subDe(reg.subId) : null;
+    reg.buffer = "";
+    if(s && compDe(s) === "fijo"){
+      var mes = mesDe(reg.fecha);
+      if(gastadoSub(s.id, mes) === 0 && esperado(s, mes) > 0){ reg.buffer = String(esperado(s, mes)); }
+    }
+  }
+
+  function pintarReg(){
+    var cats = $("rCats");
+    cats.innerHTML = "";
+    datos.categorias.forEach(function(c){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = c.nombre;
+      b.setAttribute("data-cat", c.id);
+      b.setAttribute("aria-pressed", c.id === reg.catId ? "true" : "false");
+      cats.appendChild(b);
+    });
+
+    var subs = $("rSubs");
+    subs.innerHTML = "";
+    if(!reg.catId){
+      subs.innerHTML = '<span class="recuerdo" style="margin:0">Elegí primero una categoría.</span>';
+    }else{
+      subsDe(reg.catId, mesDe(reg.fecha)).forEach(function(s){
+        var b = document.createElement("button");
+        b.type = "button"; b.textContent = s.nombre;
+        b.setAttribute("data-sub", s.id);
+        b.setAttribute("aria-pressed", s.id === reg.subId ? "true" : "false");
+        subs.appendChild(b);
+      });
+      var nv = document.createElement("button");
+      nv.type = "button"; nv.className = "nueva"; nv.textContent = "+ nueva";
+      nv.setAttribute("data-nueva", "1");
+      subs.appendChild(nv);
+    }
+
+    var s = reg.subId ? subDe(reg.subId) : null;
+    var info = "", mes = mesDe(reg.fecha);
+    if(s){
+      var comp = compDe(s);
+      if(comp === "ahorro"){ info = "Llevás " + Q(gastadoSub(s.id, null)) + " juntados"; }
+      else if(comp === "fijo"){
+        var g = gastadoSub(s.id, mes);
+        info = g > 0 ? "Ya registraste " + Q(g) + " este mes"
+             : (esperado(s, mes) > 0 ? "Monto esperado. Corregilo si el recibo vino distinto." : "Sin monto esperado");
+      }else{
+        info = (presu(s.id, mes) > 0 || arrastre(s) !== 0)
+          ? "Te quedan " + Q(disponible(s, mes) - gastadoSub(s.id, mes)) + " este mes"
+          : "Sin monto asignado · solo se registra";
+      }
+      $("btnGuardar").textContent = comp === "ahorro" ? "Guardar abono" : (comp === "fijo" ? "Marcar como pagado" : "Guardar gasto");
+      $("cajaNota").hidden = !s.pideNota;
+      $("verNota").hidden = !!s.pideNota;
+      $("recuerdo").textContent = recuerdoDePago(s.id);
+    }else{
+      $("btnGuardar").textContent = "Guardar gasto";
+      $("cajaNota").hidden = true; $("verNota").hidden = false;
+      $("recuerdo").textContent = "";
+    }
+    $("rInfo").textContent = info;
+    pintarFecha();
+    pintarMedios();
+    pintarMonto();
+    if(APP.avisarCiclo){ APP.avisarCiclo(reg.medio, reg.fecha); }
+  }
+
+  function pintarMonto(){
+    $("pantalla").textContent = "Q" + (reg.buffer === "" ? "0" : reg.buffer);
+    $("btnGuardar").disabled = !(reg.subId && parseFloat(reg.buffer) > 0 && reg.medio);
+  }
+
   function pintarFecha(){
     var b = $("btnFecha");
-    var texto = (esHoy(fechaMov) ? "Hoy, " : "") +
-      fechaMov.toLocaleDateString("es-GT",{day:"numeric",month:"long"});
-    b.textContent = texto;
+    b.textContent = (esHoy(reg.fecha) ? "Hoy, " : "") + reg.fecha.toLocaleDateString("es-GT",{day:"numeric",month:"long"});
     var s = document.createElement("span");
-    s.className = "cambia";
-    s.textContent = "cambiar";
+    s.className = "cambia"; s.textContent = "cambiar";
     b.appendChild(s);
   }
   $("btnFecha").addEventListener("click", function(){
-    var i = $("inpFecha");
-    var hoy = new Date();
-    var atras = new Date(hoy.getFullYear(), hoy.getMonth()-2, hoy.getDate());
-    i.min = aISO(atras);
+    var i = $("inpFecha"), hoy = new Date();
+    i.min = aISO(new Date(hoy.getFullYear(), hoy.getMonth()-2, hoy.getDate()));
     i.max = aISO(hoy);
-    i.value = aISO(fechaMov);
+    i.value = aISO(reg.fecha);
     i.hidden = false;
     if(i.showPicker){ try{ i.showPicker(); }catch(e){} } else { i.focus(); }
   });
   $("inpFecha").addEventListener("change", function(){
     if(!this.value) return;
     var p = this.value.split("-");
-    fechaMov = new Date(+p[0], +p[1]-1, +p[2], 12, 0, 0);
+    reg.fecha = new Date(+p[0], +p[1]-1, +p[2], 12, 0, 0);
     this.hidden = true;
-    pintarFecha();
-    if(APP.avisarCiclo){ APP.avisarCiclo(medio); }
+    pintarReg();
   });
 
   function pintarMedios(){
     var c = $("medios");
     c.innerHTML = "";
-    medios().forEach(function(m){
+    var rej = document.createElement("div");
+    rej.className = "rejillaT";
+    (datos.tarjetas || []).forEach(function(t){
+      if(!t.nombre) return;
       var b = document.createElement("button");
-      b.type = "button";
-      b.setAttribute("data-medio", m);
-      b.setAttribute("aria-pressed", m === medio ? "true" : "false");
-      b.textContent = m;
-      c.appendChild(b);
+      b.type = "button"; b.className = "elige";
+      b.setAttribute("data-medio", t.nombre);
+      b.setAttribute("aria-pressed", t.nombre === reg.medio ? "true" : "false");
+      b.setAttribute("aria-label", t.nombre + ", " + (t.tipo === "debito" ? "débito" : "crédito"));
+      b.appendChild(tarjetaNodo(t, true));
+      rej.appendChild(b);
     });
+    c.appendChild(rej);
+    var fila = document.createElement("div");
+    fila.className = "filaBase";
+    MEDIOS_BASE.forEach(function(m){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = m;
+      b.setAttribute("data-medio", m);
+      b.setAttribute("aria-pressed", m === reg.medio ? "true" : "false");
+      fila.appendChild(b);
+    });
+    c.appendChild(fila);
   }
+
+  $("rCats").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-cat]"); if(!b) return;
+    var id = b.getAttribute("data-cat");
+    if(id !== reg.catId){ reg.catId = id; reg.subId = null; reg.buffer = ""; }
+    $("formNueva").hidden = true;
+    pintarReg();
+  });
+  $("rSubs").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    if(b.getAttribute("data-nueva")){
+      $("formNueva").hidden = false;
+      $("nsNombre").value = ""; $("nsAviso").hidden = true; $("nsSug").innerHTML = "";
+      $("nsNombre").focus();
+      return;
+    }
+    reg.subId = b.getAttribute("data-sub");
+    $("formNueva").hidden = true;
+    precargar();
+    pintarReg();
+  });
   $("medios").addEventListener("click", function(e){
-    var b = e.target.closest("button[data-medio]");
-    if(!b) return;
-    medio = b.getAttribute("data-medio");
-    pintarMedios();
-    refrescarBotones();
-    if(APP.avisarCiclo){ APP.avisarCiclo(medio); }
+    var b = e.target.closest("button[data-medio]"); if(!b) return;
+    reg.medio = b.getAttribute("data-medio");
+    pintarMedios(); pintarMonto();
+    if(APP.avisarCiclo){ APP.avisarCiclo(reg.medio, reg.fecha); }
   });
-
-  function refrescarBotones(){
-    var ok = parseFloat(buffer) > 0 && !!medio;
-    $("btnGuardar").disabled = !ok;
-    var soloM = $("btnSoloMonto");
-    soloM.disabled = !(parseFloat(buffer) > 0);
-  }
-  function pintarMonto(){
-    $("pantalla").textContent = "Q" + (buffer === "" ? "0" : buffer);
-    refrescarBotones();
-  }
-
-  function abrirMonto(c){
-    activa = c;
-    buffer = "";
-    medio = null;
-    fechaMov = new Date();
-    $("inpFecha").hidden = true;
-    pintarFecha();
-    var mes = mesDe();
-    if(c.tipo === "fijo" && presu(c.id, mes) > 0 && gastado(c.id, mes) === 0){
-      buffer = String(presu(c.id, mes));
-    }
-    $("tMonto").textContent = c.nombre;
-    var sub;
-    if(c.tipo === "ahorro"){
-      sub = "Llevás " + Q(gastado(c.id, null)) + " juntados";
-      $("btnGuardar").textContent = "Guardar abono";
-    }else if(c.tipo === "fijo"){
-      sub = gastado(c.id, mes) > 0
-        ? "Ya registraste " + Q(gastado(c.id, mes)) + " este mes"
-        : (presu(c.id, mes) > 0
-            ? "Monto esperado. Corregilo si el recibo vino distinto."
-            : "Sin monto esperado.");
-      $("btnGuardar").textContent = "Marcar como pagado";
-    }else{
-      var p = presu(c.id, mes);
-      sub = (p > 0 || arrastre(c) !== 0)
-        ? "Te quedan " + Q(disponible(c, mes) - gastado(c.id, mes)) + " este mes"
-        : "Sin monto asignado · solo se registra";
-      $("btnGuardar").textContent = "Guardar gasto";
-    }
-    $("sMonto").textContent = sub;
-    $("recuerdo").textContent = recuerdoDePago(c);
-    $("txtNota").value = "";
-    $("cajaNota").hidden = !c.pideNota;
-    $("verNota").hidden = c.pideNota;
-    $("btnSoloMonto").hidden = (c.tipo !== "fijo");
-    pintarMedios();
-    pintarMonto();
-    if(APP.avisarCiclo){ APP.avisarCiclo(null); }
-    abrir("hojaMonto");
-  }
-
-  $("verNota").addEventListener("click", function(){
-    $("cajaNota").hidden = false;
-    this.hidden = true;
-    $("txtNota").focus();
-  });
-
   $("teclado").addEventListener("click", function(e){
     var t = e.target.getAttribute("data-t");
     if(t === null) return;
-    if(t === "b"){ buffer = buffer.slice(0,-1); }
-    else if(t === "."){ if(buffer.indexOf(".") === -1 && buffer !== ""){ buffer += "."; } }
+    var bf = reg.buffer;
+    if(t === "b"){ bf = bf.slice(0,-1); }
+    else if(t === "."){ if(bf.indexOf(".") === -1 && bf !== ""){ bf += "."; } }
     else{
-      var p = buffer.split(".");
+      var p = bf.split(".");
       if(p[1] && p[1].length >= 2) return;
-      if(buffer.replace(".","").length >= 9) return;
-      buffer += t;
+      if(bf.replace(".","").length >= 9) return;
+      bf += t;
     }
+    reg.buffer = bf;
     pintarMonto();
+  });
+  $("verNota").addEventListener("click", function(){
+    $("cajaNota").hidden = false; this.hidden = true; $("txtNota").focus();
+  });
+
+  /* nueva subcategoría: sugerencias y duplicados */
+  function parecidas(catId, texto){
+    var n = norm(texto);
+    if(!n) return [];
+    return datos.subs.filter(function(s){
+      if(s.catId !== catId) return false;
+      var m = norm(s.nombre);
+      return m === n || m.indexOf(n) >= 0 || n.indexOf(m) >= 0;
+    });
+  }
+  $("nsNombre").addEventListener("input", function(){
+    var sug = $("nsSug");
+    sug.innerHTML = "";
+    $("nsAviso").hidden = true;
+    if(!reg.catId) return;
+    parecidas(reg.catId, this.value).forEach(function(s){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = "Usar " + s.nombre;
+      b.addEventListener("click", function(){
+        reg.subId = s.id;
+        $("formNueva").hidden = true;
+        precargar(); pintarReg();
+      });
+      sug.appendChild(b);
+    });
+  });
+  $("nsCuotas").addEventListener("change", function(){ $("nsCuotasCampos").hidden = !this.checked; });
+
+  $("nsCrear").addEventListener("click", function(){
+    var aviso = $("nsAviso");
+    function falla(t){ aviso.textContent = t; aviso.hidden = false; }
+    if(!reg.catId){ falla("Elegí primero una categoría."); return; }
+    var nombre = $("nsNombre").value.trim().replace(/\s+/g," ");
+    if(!nombre){ falla("Escribí un nombre."); return; }
+    var igual = datos.subs.filter(function(s){ return s.catId === reg.catId && norm(s.nombre) === norm(nombre); })[0];
+    if(igual){
+      reg.subId = igual.id;
+      $("formNueva").hidden = true;
+      precargar(); pintarReg();
+      return;
+    }
+    var sim = parecidas(reg.catId, nombre);
+    if(sim.length && !confirm("Ya tenés \u201c" + sim[0].nombre + "\u201d. ¿Crear \u201c" + nombre + "\u201d de todas formas?")) return;
+
+    var c = catDe(reg.catId);
+    var s = nuevaSub(reg.catId, nombre, c.comp);
+    if($("nsCuotas").checked){
+      var cm = parseFloat($("nsCuotaMonto").value), fin = $("nsFin").value;
+      if(!(cm > 0)){ falla("Escribí el monto de cada cuota."); return; }
+      if(!/^\d{4}-\d{2}$/.test(fin)){ falla("Elegí el mes de la última cuota."); return; }
+      if(fin < mesDe()){ falla("La última cuota no puede ser de un mes que ya pasó."); return; }
+      s.cuotas = {monto: cm, hasta: fin};
+      s.arrastra = false;
+    }
+    datos.subs.push(s);
+    guardar();
+    reg.subId = s.id;
+    $("formNueva").hidden = true;
+    precargar(); pintarReg(); pintar();
   });
 
   $("btnGuardar").addEventListener("click", function(){
-    var monto = parseFloat(buffer);
-    if(!(monto > 0) || !activa || !medio) return;
-    var f = fechaMov;
-    if(esHoy(f)){ f = new Date(); }
-    var mov = {id:nid(), catId:activa.id, monto:monto, fecha:f.toISOString(), medio:medio};
+    var monto = parseFloat(reg.buffer);
+    if(!(monto > 0) || !reg.subId || !reg.medio) return;
+    var f = esHoy(reg.fecha) ? new Date() : reg.fecha;
+    var mov = {id:nid(), subId:reg.subId, monto:monto, fecha:f.toISOString(), medio:reg.medio};
     var nota = $("txtNota").value.trim();
     if(nota){ mov.nota = nota; }
     datos.movimientos.push(mov);
     guardar(); pintar(); cerrarTodo();
   });
 
-  $("btnSoloMonto").addEventListener("click", function(){
-    var m = parseFloat(buffer);
-    if(!(m > 0) || !activa) return;
-    ponerPresu(activa.id, mesDe(), m);
-    guardar(); pintar(); cerrarTodo();
-  });
+  /* ---------- pantalla: presupuesto ---------- */
+  var presMes = mesDe();
 
-  $("tablero").addEventListener("click", function(e){
-    var sb = e.target.closest("button.seccion");
-    if(sb){
-      var sid = "sec-" + sb.getAttribute("data-seccion");
-      datos.plegados[sid] = datos.plegados[sid] === false ? true : false;
-      guardar(); pintar();
-      return;
-    }
-    var b = e.target.closest("button.fila");
-    if(!b) return;
-    var c = datos.categorias.filter(function(x){ return x.id === b.getAttribute("data-cat"); })[0];
-    if(c){ abrirMonto(c); }
-  });
-
-  /* ---------- ajustes ---------- */
-  function filaCfg(c){
-    var mes = mesDe();
-    var d = document.createElement("div");
-    d.className = "cfg";
-    d.setAttribute("data-id", c.id);
-    d.innerHTML =
-      '<div class="l1"><input type="text" class="n" aria-label="Nombre">' +
-      '<input type="number" class="mo" inputmode="decimal" min="0" step="1" aria-label="Monto del mes">' +
-      '<button class="quitar" type="button">Quitar</button></div>' +
-      '<div class="l2"><label><input type="checkbox" class="ar"> Arrastra saldo</label>' +
-      '<label><input type="checkbox" class="nt"> Pide nota</label></div>';
-    d.querySelector(".n").value = c.nombre;
-    var p = presu(c.id, mes);
-    d.querySelector(".mo").value = p > 0 ? p : "";
-    d.querySelector(".ar").checked = !!c.arrastra;
-    d.querySelector(".nt").checked = !!c.pideNota;
-    if(c.tipo === "ahorro"){ d.querySelector(".ar").disabled = true; }
-    d.querySelector(".quitar").addEventListener("click", function(){
-      if(confirm("\u00bfQuitar " + c.nombre + "? Sus movimientos quedan en el historial.")){ d.remove(); }
-    });
-    return d;
+  function campoMonto(id, placeholder){
+    var i = document.createElement("input");
+    i.type = "number"; i.inputMode = "decimal"; i.min = "0"; i.step = "0.01";
+    i.placeholder = placeholder;
+    var v = presu(id, presMes);
+    if(v > 0){ i.value = v; }
+    i.setAttribute("data-id", id);
+    return i;
   }
 
-  function abrirAjustes(){
-    var cont = $("campos"), mes = mesDe();
-    cont.innerHTML = "";
-    $("sAj").textContent = "Montos de " + nombreMes(mes) + ". Dejalo vacío si este mes solo querés medir.";
-    SECCIONES.forEach(function(sec){
-      var propias = datos.categorias.filter(function(c){ return c.seccion === sec.id; });
-      if(!propias.length) return;
-      var r = document.createElement("p");
-      r.className = "subrotulo";
-      r.textContent = sec.titulo.toUpperCase();
-      cont.appendChild(r);
-      propias.forEach(function(c){ cont.appendChild(filaCfg(c)); });
-    });
-    abrir("hojaAjustes");
-  }
-  $("btnAjustes").addEventListener("click", abrirAjustes);
+  function pintarPres(){
+    $("pMes").textContent = nombreMes(presMes);
+    var lista = $("pLista");
+    lista.innerHTML = "";
+    var total = 0;
+    datos.categorias.forEach(function(c){
+      var subs = subsDe(c.id, presMes);
+      var ref = c.comp === "ahorro" ? 0 : refCat(c, presMes);
+      total += ref;
 
-  $("agregarCat").addEventListener("click", function(){
-    var c = nuevaCat("", "personales");
-    datos.categorias.push(c);
-    var f = filaCfg(c);
-    $("campos").appendChild(f);
-    f.querySelector(".n").focus();
-  });
+      var bloque = document.createElement("div");
+      bloque.className = "pCat";
+      var cab = document.createElement("div");
+      cab.className = "pFila";
+      var n = document.createElement("span");
+      n.className = "pn"; n.textContent = c.nombre;
+      cab.appendChild(n);
+      var ph = c.comp === "fijo" ? "suma: " + Q(subs.reduce(function(t,s){ return t + esperado(s, presMes); }, 0))
+             : (c.comp === "ahorro" ? "—" : "sin tope");
+      var ic = campoMonto(c.id, ph);
+      ic.setAttribute("aria-label", "Monto de " + c.nombre);
+      if(c.comp === "ahorro"){ ic.disabled = true; ic.value = ""; }
+      cab.appendChild(ic);
+      bloque.appendChild(cab);
 
-  $("guardarAjustes").addEventListener("click", function(){
-    var mes = mesDe(), vivos = {};
-    Array.prototype.forEach.call($("campos").querySelectorAll(".cfg"), function(d){
-      var id = d.getAttribute("data-id");
-      var nombre = d.querySelector(".n").value.trim();
-      if(!nombre) return;
-      vivos[id] = true;
-      var monto = parseFloat(d.querySelector(".mo").value);
-      if(!(monto > 0)){ monto = 0; }
-      ponerPresu(id, mes, monto);
-      var c = datos.categorias.filter(function(x){ return x.id === id; })[0];
-      if(c){
-        c.nombre = nombre;
-        c.arrastra = d.querySelector(".ar").checked;
-        c.pideNota = d.querySelector(".nt").checked;
+      var cont = document.createElement("div");
+      cont.className = "pSubs";
+      var sumaSubs = 0;
+      subs.forEach(function(s){
+        var f = document.createElement("div");
+        f.className = "pFila";
+        var sn = document.createElement("span");
+        sn.className = "pn";
+        sn.textContent = s.nombre + (s.cuotas ? " · cuota" : "");
+        f.appendChild(sn);
+        var php = s.cuotas ? Q(s.cuotas.monto) : (c.comp === "ahorro" ? "meta" : "sin monto");
+        var inp = campoMonto(s.id, php);
+        inp.setAttribute("aria-label", "Monto de " + s.nombre);
+        f.appendChild(inp);
+        cont.appendChild(f);
+        sumaSubs += compDe(s) === "fijo" ? esperado(s, presMes) : presu(s.id, presMes);
+      });
+      if(!subs.length){
+        var v = document.createElement("p");
+        v.className = "nota"; v.style.margin = "4px 0";
+        v.textContent = "Sin subcategorías todavía. Se crean al registrar.";
+        cont.appendChild(v);
       }
+      bloque.appendChild(cont);
+
+      var tope = presu(c.id, presMes);
+      if(tope > 0 && sumaSubs > tope){
+        var w = document.createElement("p");
+        w.className = "aviso";
+        w.textContent = "Las subcategorías suman " + Q(sumaSubs) + ", más que el tope de " + Q(tope) + ".";
+        bloque.appendChild(w);
+      }
+      lista.appendChild(bloque);
     });
-    datos.categorias = datos.categorias.filter(function(c){ return vivos[c.id]; });
+
+    var ing = datos.ingresos.reduce(function(t, i){ return i.fecha.slice(0,7) === presMes ? t + i.monto : t; }, 0);
+    var txt = "Presupuestado " + Q(total);
+    if(ing > 0){ txt += " · ingresos " + Q(ing) + " · sin asignar " + Q(ing - total); }
+    $("pResumen").textContent = txt;
+  }
+
+  $("pLista").addEventListener("change", function(e){
+    var i = e.target;
+    if(!i.getAttribute || !i.getAttribute("data-id")) return;
+    var v = parseFloat(i.value);
+    ponerPresu(i.getAttribute("data-id"), presMes, v > 0 ? v : 0);
+    guardar(); pintarPres(); pintar();
+  });
+  $("pAnt").addEventListener("click", function(){ presMes = mesPrevio(presMes); pintarPres(); });
+  $("pSig").addEventListener("click", function(){ presMes = mesSiguiente(presMes); pintarPres(); });
+  $("pCopiar").addEventListener("click", function(){
+    var prev = mesPrevio(presMes), orig = datos.presupuestos[prev];
+    if(!orig || !Object.keys(orig).length){ alert("El mes anterior no tiene montos."); return; }
+    var hay = datos.presupuestos[presMes] && Object.keys(datos.presupuestos[presMes]).length;
+    if(hay && !confirm("Esto reemplaza los montos de " + nombreMes(presMes) + ". ¿Seguir?")) return;
+    datos.presupuestos[presMes] = JSON.parse(JSON.stringify(orig));
+    guardar(); pintarPres(); pintar();
+  });
+
+  /* ---------- hoja: categorías ---------- */
+  var cBorrador = null;
+
+  function pintarCategorias(){
+    var lista = $("cLista");
+    lista.innerHTML = "";
+    cBorrador.categorias.forEach(function(c){
+      var b = document.createElement("div");
+      b.className = "cCat";
+      var l1 = document.createElement("div");
+      l1.className = "pFila";
+      var n = document.createElement("input");
+      n.type = "text"; n.value = c.nombre;
+      n.setAttribute("aria-label", "Nombre de la categoría");
+      n.addEventListener("input", function(){ c.nombre = this.value; });
+      l1.appendChild(n);
+      var q = document.createElement("button");
+      q.type = "button"; q.className = "quitar"; q.textContent = "Quitar";
+      q.addEventListener("click", function(){
+        var cuantos = cBorrador.subs.filter(function(s){ return s.catId === c.id; }).length;
+        var msg = cuantos
+          ? "¿Quitar " + c.nombre + " y sus " + cuantos + " subcategorías? Sus gastos quedan en el historial."
+          : "¿Quitar " + c.nombre + "?";
+        if(!confirm(msg)) return;
+        cBorrador.categorias = cBorrador.categorias.filter(function(x){ return x.id !== c.id; });
+        cBorrador.subs = cBorrador.subs.filter(function(s){ return s.catId !== c.id; });
+        pintarCategorias();
+      });
+      l1.appendChild(q);
+      b.appendChild(l1);
+
+      var seg = document.createElement("div");
+      seg.className = "segm";
+      [["fijo","Fijo"],["variable","Variable"],["ahorro","Ahorro"]].forEach(function(o){
+        var x = document.createElement("button");
+        x.type = "button"; x.textContent = o[1];
+        x.setAttribute("aria-pressed", c.comp === o[0] ? "true" : "false");
+        x.addEventListener("click", function(){ c.comp = o[0]; pintarCategorias(); });
+        seg.appendChild(x);
+      });
+      b.appendChild(seg);
+
+      var hermanas = cBorrador.subs.filter(function(s){ return s.catId === c.id; });
+      hermanas.forEach(function(s){
+        var d = document.createElement("div");
+        d.className = "cSub";
+        var r1 = document.createElement("div");
+        r1.className = "l1";
+        var sn = document.createElement("input");
+        sn.type = "text"; sn.value = s.nombre;
+        sn.setAttribute("aria-label", "Nombre de la subcategoría");
+        sn.addEventListener("input", function(){ s.nombre = this.value; });
+        r1.appendChild(sn);
+        var sq = document.createElement("button");
+        sq.type = "button"; sq.className = "quitar"; sq.textContent = "Quitar";
+        sq.addEventListener("click", function(){
+          if(!confirm("¿Quitar " + s.nombre + "? Sus gastos quedan en el historial.")) return;
+          cBorrador.subs = cBorrador.subs.filter(function(x){ return x.id !== s.id; });
+          pintarCategorias();
+        });
+        r1.appendChild(sq);
+        d.appendChild(r1);
+
+        var r2 = document.createElement("div");
+        r2.className = "l2";
+        function casilla(texto, clave){
+          var lb = document.createElement("label");
+          var cb = document.createElement("input");
+          cb.type = "checkbox"; cb.checked = !!s[clave];
+          cb.addEventListener("change", function(){ s[clave] = this.checked; });
+          lb.appendChild(cb);
+          lb.appendChild(document.createTextNode(" " + texto));
+          return lb;
+        }
+        r2.appendChild(casilla("Arrastra saldo", "arrastra"));
+        r2.appendChild(casilla("Pide nota", "pideNota"));
+        var lc = document.createElement("label");
+        var cc = document.createElement("input");
+        cc.type = "checkbox"; cc.checked = !!s.cuotas;
+        cc.addEventListener("change", function(){
+          s.cuotas = this.checked ? {monto:0, hasta:""} : null;
+          pintarCategorias();
+        });
+        lc.appendChild(cc); lc.appendChild(document.createTextNode(" En cuotas"));
+        r2.appendChild(lc);
+        if(hermanas.length > 1){
+          var sel = document.createElement("select");
+          sel.setAttribute("aria-label", "Fusionar con otra subcategoría");
+          var o0 = document.createElement("option");
+          o0.value = ""; o0.textContent = "Fusionar con…";
+          sel.appendChild(o0);
+          hermanas.forEach(function(h){
+            if(h.id === s.id) return;
+            var o = document.createElement("option");
+            o.value = h.id; o.textContent = h.nombre;
+            sel.appendChild(o);
+          });
+          sel.value = s.fusionarCon || "";
+          sel.addEventListener("change", function(){ s.fusionarCon = this.value || null; });
+          r2.appendChild(sel);
+        }
+        d.appendChild(r2);
+
+        if(s.cuotas){
+          var cu = document.createElement("div");
+          cu.className = "cuo";
+          var im = document.createElement("input");
+          im.type = "number"; im.inputMode = "decimal"; im.placeholder = "Monto de cuota";
+          im.setAttribute("aria-label", "Monto de cada cuota");
+          if(s.cuotas.monto){ im.value = s.cuotas.monto; }
+          im.addEventListener("input", function(){ s.cuotas.monto = parseFloat(this.value) || 0; });
+          var ih = document.createElement("input");
+          ih.type = "month"; ih.value = s.cuotas.hasta || "";
+          ih.setAttribute("aria-label", "Mes de la última cuota");
+          ih.addEventListener("change", function(){ s.cuotas.hasta = this.value; });
+          cu.appendChild(im); cu.appendChild(ih);
+          d.appendChild(cu);
+        }
+        b.appendChild(d);
+      });
+      lista.appendChild(b);
+    });
+  }
+
+  $("btnCategorias").addEventListener("click", function(){
+    cBorrador = {
+      categorias: JSON.parse(JSON.stringify(datos.categorias)),
+      subs: JSON.parse(JSON.stringify(datos.subs))
+    };
+    pintarCategorias();
+    abrir("hojaCat");
+  });
+  $("cNueva").addEventListener("click", function(){
+    var nombre = prompt("Nombre de la nueva categoría");
+    if(!nombre || !nombre.trim()) return;
+    cBorrador.categorias.push({id:"c-" + nid(), nombre:nombre.trim(), comp:"variable"});
+    pintarCategorias();
+    $("cLista").lastElementChild.scrollIntoView({block:"center"});
+  });
+  $("cGuardar").addEventListener("click", function(){
+    var malos = cBorrador.categorias.filter(function(c){ return !c.nombre.trim(); });
+    if(malos.length){ alert("Hay una categoría sin nombre."); return; }
+    var sinNombre = cBorrador.subs.filter(function(s){ return !s.nombre.trim(); });
+    if(sinNombre.length){ alert("Hay una subcategoría sin nombre."); return; }
+    var cuotaMala = cBorrador.subs.filter(function(s){
+      return s.cuotas && (!(s.cuotas.monto > 0) || !/^\d{4}-\d{2}$/.test(s.cuotas.hasta || ""));
+    });
+    if(cuotaMala.length){ alert("Completá el monto y el mes final de las cuotas de " + cuotaMala[0].nombre + "."); return; }
+
+    /* fusiones: los gastos pasan a la subcategoría destino */
+    var quitar = {};
+    cBorrador.subs.forEach(function(s){
+      if(s.fusionarCon && s.fusionarCon !== s.id){
+        datos.movimientos.forEach(function(m){ if(m.subId === s.id){ m.subId = s.fusionarCon; } });
+        quitar[s.id] = true;
+      }
+      delete s.fusionarCon;
+    });
+    datos.categorias = cBorrador.categorias.map(function(c){ return {id:c.id, nombre:c.nombre.trim(), comp:c.comp}; });
+    datos.subs = cBorrador.subs.filter(function(s){ return !quitar[s.id]; }).map(function(s){
+      s.nombre = s.nombre.trim().replace(/\s+/g," ");
+      if(s.cuotas){ s.arrastra = false; }
+      return s;
+    });
     guardar(); pintar(); cerrarTodo();
   });
 
-  /* ---------- historial ---------- */
+  /* ---------- hoja: movimientos ---------- */
   $("btnHistorial").addEventListener("click", function(){
     var cont = $("movimientos");
     cont.innerHTML = "";
@@ -715,7 +1027,7 @@ var APP = (function(){
       ? todos.length + (todos.length === 1 ? " movimiento en total" : " movimientos en total")
       : "Todavía no hay movimientos.";
     var mesAct = null;
-    todos.slice(0, 400).forEach(function(m){
+    todos.slice(0, 500).forEach(function(m){
       var k = m.fecha.slice(0,7);
       if(k !== mesAct){
         mesAct = k;
@@ -724,21 +1036,21 @@ var APP = (function(){
         r.textContent = nombreMes(k).toUpperCase();
         cont.appendChild(r);
       }
-      var c = datos.categorias.filter(function(x){ return x.id === m.catId; })[0];
+      var s = subDe(m.subId), c = s ? catDe(s.catId) : null;
       var f = new Date(m.fecha);
       var d = document.createElement("div");
       d.className = "mov";
       d.innerHTML = '<span><span class="nm"></span><small></small></span>' +
-                    '<span class="der"><span class="cifra mt"></span>' +
-                    '<button class="quitar" type="button">Borrar</button></span>';
-      d.querySelector(".nm").textContent = c ? c.nombre : "Sobre eliminado";
+                    '<span class="der"><span class="cifra mt"></span><button class="quitar" type="button">Borrar</button></span>';
+      d.querySelector(".nm").textContent = s ? s.nombre + (c ? " · " + c.nombre : "") : "Subcategoría eliminada";
       var pie = f.toLocaleDateString("es-GT",{day:"numeric",month:"short"}) + " · " +
                 f.toLocaleTimeString("es-GT",{hour:"numeric",minute:"2-digit"});
       if(m.medio){ pie += " · " + m.medio; }
       if(m.nota){ pie += " · " + m.nota; }
       d.querySelector("small").textContent = pie;
-      d.querySelector(".mt").textContent = (c && c.tipo === "ahorro" ? "+" : "") + Q(m.monto);
+      d.querySelector(".mt").textContent = (s && compDe(s) === "ahorro" ? "+" : "") + Q(m.monto);
       d.querySelector(".quitar").addEventListener("click", function(){
+        if(!confirm("¿Borrar este movimiento?")) return;
         datos.movimientos = datos.movimientos.filter(function(x){ return x.id !== m.id; });
         guardar(); pintar(); d.remove();
       });
@@ -753,23 +1065,21 @@ var APP = (function(){
     return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
   }
   function csv(){
-    var lineas = [["tipo","fecha","hora","seccion","sobre_o_fuente","monto","forma_de_pago","nota","presupuesto_del_mes"].join(",")];
+    var lineas = [["tipo","fecha","hora","categoria","subcategoria","monto","forma_de_pago","nota","presupuesto_subcategoria"].join(",")];
     datos.movimientos.slice().sort(function(a,b){ return a.fecha < b.fecha ? -1 : 1; }).forEach(function(m){
-      var c = datos.categorias.filter(function(x){ return x.id === m.catId; })[0];
-      var f = new Date(m.fecha);
-      lineas.push([
-        "gasto", esc(m.fecha.slice(0,10)), esc(f.toTimeString().slice(0,5)),
-        esc(c ? c.seccion : ""), esc(c ? c.nombre : "eliminado"),
-        esc(m.monto), esc(m.medio || ""), esc(m.nota || ""),
-        esc(c ? presu(c.id, m.fecha.slice(0,7)) : "")
-      ].join(","));
+      var s = subDe(m.subId), c = s ? catDe(s.catId) : null, f = new Date(m.fecha);
+      lineas.push(["gasto", esc(m.fecha.slice(0,10)), esc(dos(f.getHours()) + ":" + dos(f.getMinutes())),
+        esc(c ? c.nombre : ""), esc(s ? s.nombre : "eliminada"), esc(m.monto),
+        esc(m.medio || ""), esc(m.nota || ""), esc(s ? presu(s.id, m.fecha.slice(0,7)) : "")].join(","));
     });
     datos.ingresos.slice().sort(function(a,b){ return a.fecha < b.fecha ? -1 : 1; }).forEach(function(i){
       var fu = datos.fuentes.filter(function(x){ return x.id === i.fuenteId; })[0];
-      lineas.push([
-        "ingreso", esc(i.fecha.slice(0,10)), "", "ingresos",
-        esc(fu ? fu.nombre : "otra"), esc(i.monto), "", esc(i.nota || ""), ""
-      ].join(","));
+      lineas.push(["ingreso", esc(i.fecha.slice(0,10)), "", "Ingresos", esc(fu ? fu.nombre : "otra"),
+        esc(i.monto), "", esc(i.nota || ""), ""].join(","));
+    });
+    (datos.pagosTarjeta || []).forEach(function(p){
+      lineas.push(["pago_tarjeta", esc(p.fecha.slice(0,10)), "", "Tarjetas", esc(p.tarjeta || ""),
+        esc(p.monto), "", "", ""].join(","));
     });
     return lineas.join("\n");
   }
@@ -777,14 +1087,12 @@ var APP = (function(){
     var blob = new Blob(["\ufeff" + csv()], {type:"text/csv;charset=utf-8"});
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
-    a.href = url;
-    a.download = "sobres-" + mesDe() + ".csv";
-    document.body.appendChild(a);
-    a.click();
+    a.href = url; a.download = "sobres-" + mesDe() + ".csv";
+    document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
   });
 
-  /* ---------- respaldo ---------- */
+  /* ---------- respaldo y empezar de cero ---------- */
   $("btnRespaldo").addEventListener("click", function(){
     $("areaResp").value = JSON.stringify(datos);
     abrir("hojaResp");
@@ -794,48 +1102,57 @@ var APP = (function(){
       var n = JSON.parse($("areaResp").value);
       if(!n.categorias || !n.movimientos){ throw new Error("formato"); }
       datos = n;
-      cargar.normaliza = null;
-      if(!datos.presupuestos){ datos.presupuestos = {}; }
-      if(!datos.plegados){ datos.plegados = {}; }
-      if(!datos.ingresos){ datos.ingresos = []; }
-      if(!datos.fuentes){ datos.fuentes = []; }
-      if(!datos.tarjetas){ datos.tarjetas = []; }
-      if(!datos.cortesPagados){ datos.cortesPagados = {}; }
-      if(!datos.inicio){ datos.inicio = mesDe(); }
+      if(!datos.v || datos.v < 8){ migrarV8(); }
+      normalizar();
       guardar(); pintar(); cerrarTodo();
     }catch(e){
       alert("Ese texto no tiene el formato correcto. Pegá el respaldo completo, desde la primera llave hasta la última.");
     }
   });
+  $("btnCero").addEventListener("click", function(){
+    if(!confirm("Se borran todos los gastos, ingresos, presupuestos y pagos de tarjeta. Se conservan tus categorías, subcategorías y tarjetas. ¿Seguir?")) return;
+    if(!confirm("No se puede deshacer. Si querés, primero copiá el Respaldo. ¿Borrar ahora?")) return;
+    datos.movimientos = []; datos.ingresos = []; datos.presupuestos = {};
+    datos.pagosTarjeta = []; datos.montosCorte = {}; datos.cortesPagados = {};
+    datos.inicio = mesDe(); datos.visto = mesDe(); datos.inicioRegistro = aISO(new Date());
+    guardar(); pintar();
+    mostrarTab("sobres");
+  });
 
   /* ---------- modo claro / oscuro ---------- */
   var mq = window.matchMedia("(prefers-color-scheme: dark)");
   function modo(){ document.documentElement.setAttribute("data-m", mq.matches ? "oscuro" : "claro"); }
-  mq.addEventListener("change", modo);
+  if(mq.addEventListener){ mq.addEventListener("change", modo); }
   modo();
 
   /* ---------- arranque ---------- */
   cargar();
   var copiado = revisarMes();
   guardar();
-  pintar();
 
-  if(copiado){
-    aviso("Mes nuevo. Copié los montos del mes pasado —", abrirAjustes, "revisalos");
-  }
-  if(/iPad|iPhone|iPod/.test(navigator.userAgent) &&
-     navigator.standalone === false && location.protocol.indexOf("http") === 0){
-    aviso("Estás en Safari. Agregá Sobres a la pantalla de inicio y usalo siempre desde el ícono.");
-  }
-
-  /* Lo que caja.js necesita */
-  return {
-    $: $, nid: nid, Q: Q, esc: esc,
+  var api = {
+    $: $, nid: nid, Q: Q, esc: esc, aISO: aISO,
     mesDe: mesDe, mesSiguiente: mesSiguiente, nombreMes: nombreMes, soloMes: soloMes,
     diaCorto: diaCorto, diaLargo: diaLargo,
-    medios: medios, abrir: abrir, cerrarTodo: cerrarTodo,
-    guardar: guardar, pintar: pintar,
-    presu: presu, gastado: gastado, disponible: disponible, cuotasRestantes: cuotasRestantes,
-    datosRef: function(){ return datos; }
+    medios: medios, guardar: guardar, pintar: pintar, mostrarTab: mostrarTab, alMostrar: alMostrar,
+    presu: presu, gastadoSub: gastadoSub, gastadoCat: gastadoCat, esperado: esperado,
+    subsDe: subsDe, subDe: subDe, catDe: catDe, compDe: compDe, refCat: refCat,
+    datosRef: function(){ return datos; },
+    HUES: HUES, LUCES: LUCES, colorFondo: colorFondo, colorTexto: colorTexto,
+    tarjetaNodo: tarjetaNodo, tarjetaPorNombre: tarjetaPorNombre, esCredito: esCredito
   };
+
+  /* Se pinta después de que caja.js se engancha. */
+  setTimeout(function(){
+    mostrarTab("sobres");
+    if(copiado){
+      aviso("Mes nuevo. Copié los montos del mes pasado —", function(){ mostrarTab("pres"); }, "revisalos");
+    }
+    if(/iPad|iPhone|iPod/.test(navigator.userAgent) &&
+       navigator.standalone === false && location.protocol.indexOf("http") === 0){
+      aviso("Estás en Safari. Agregá Sobres a la pantalla de inicio y usalo siempre desde el ícono.");
+    }
+  }, 0);
+
+  return api;
 })();

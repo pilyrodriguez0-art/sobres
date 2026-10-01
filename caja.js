@@ -78,10 +78,15 @@
     return D().ingresos.reduce(function(s, i){ return i.fecha.slice(0,7) === mes ? s + i.monto : s; }, 0);
   }
 
-  /* ---------- caja ---------- */
+  /* ---------- caja: lo que tiene que salir de la cuenta, con nombre ---------- */
   function caja(mes){
-    var r = {tarjetas:[], fijos:0, variables:0, total:0};
+    var items = [], total = 0;
     var esteMes = (mes === mesDe());
+    function suma(nombre, detalle, monto){
+      if(monto <= 0) return;
+      items.push({nombre:nombre, detalle:detalle, monto:monto});
+      total += monto;
+    }
 
     (D().tarjetas || []).forEach(function(t){
       if(!listoParaCiclos(t)) return;
@@ -95,50 +100,49 @@
         var cl = claveCorte(t, corteF);
         if(vistos[cl] || estaPagado(cl)) continue;
         vistos[cl] = true;
-        var monto = montoCorte(t, corteF);
-        if(monto <= 0) continue;
-        r.tarjetas.push({nombre:t.nombre, monto:monto, vence:pagoF, abierto:corteF > new Date(),
-                         incompleto:!completo(t, corteF) && typeof D().montosCorte[cl] !== "number"});
-        r.total += monto;
+        var det = "pago de tarjeta · vence el " + diaLargo(pagoF);
+        if(corteF > new Date()){ det += " · todavía sumando compras"; }
+        if(!completo(t, corteF) && typeof D().montosCorte[cl] !== "number"){ det += " · falta el monto del estado de cuenta"; }
+        suma(t.nombre, det, montoCorte(t, corteF));
       }
     });
 
+    /* si el mes todavía no tiene presupuesto propio, se usa el del mes en curso */
+    var mp = (D().presupuestos[mes] && Object.keys(D().presupuestos[mes]).length) ? mes : mesDe();
     D().categorias.forEach(function(c){
       if(c.comp === "ahorro") return;
       var subs = APP.subsDe(c.id, mes);
-      if(c.comp === "fijo"){
-        subs.forEach(function(s){
-          if(APP.esCredito(medioHabitual(uno(s.id)))) return;
-          var esp = APP.esperado(s, mes);
-          if(esp <= 0) return;
-          var falta = esteMes ? esp - APP.gastadoSub(s.id, mes) : esp;
-          if(falta > 0){ r.fijos += falta; r.total += falta; }
-        });
-        return;
-      }
-      /* variables: el tope de la categoría, o lo que suman sus subcategorías */
-      var ids = {};
-      subs.forEach(function(s){ ids[s.id] = true; });
-      var cuotas = subs.filter(function(s){ return APP.compDe(s) === "fijo"; });
-      cuotas.forEach(function(s){
+      /* fijos y cuotas, uno por uno */
+      subs.forEach(function(s){
+        if(APP.compDe(s) !== "fijo") return;
         if(APP.esCredito(medioHabitual(uno(s.id)))) return;
-        var esp = APP.esperado(s, mes);
+        var esp = APP.esperado(s, mp);
         var falta = esteMes ? esp - APP.gastadoSub(s.id, mes) : esp;
-        if(falta > 0){ r.fijos += falta; r.total += falta; }
+        suma(s.nombre, s.cuotas ? "cuota · " + c.nombre : c.nombre, falta);
       });
+      if(c.comp === "fijo") return;
+      /* lo que queda del presupuesto de la categoría */
+      var vars = subs.filter(function(s){ return APP.compDe(s) !== "fijo"; });
+      var ids = {};
+      vars.forEach(function(s){ ids[s.id] = true; });
       if(APP.esCredito(medioHabitual(ids))) return;
-      var ref = APP.presu(c.id, mes) > 0 ? APP.presu(c.id, mes)
-        : subs.filter(function(s){ return APP.compDe(s) !== "fijo"; })
-              .reduce(function(t, s){ return t + APP.presu(s.id, mes); }, 0);
+      var ref = APP.presu(c.id, mp) > 0 ? APP.presu(c.id, mp)
+        : vars.reduce(function(t, s){ return t + APP.presu(s.id, mp); }, 0);
       if(ref <= 0) return;
-      var gas = 0;
-      if(esteMes){
-        subs.forEach(function(s){ if(APP.compDe(s) !== "fijo"){ gas += APP.gastadoSub(s.id, mes); } });
-      }
-      var falta = ref - gas;
-      if(falta > 0){ r.variables += falta; r.total += falta; }
+      var gas = esteMes ? vars.reduce(function(t, s){ return t + APP.gastadoSub(s.id, mes); }, 0) : 0;
+      suma(c.nombre, esteMes ? "lo que te queda del presupuesto" : "presupuesto del mes", ref - gas);
     });
-    return r;
+    return {items:items, total:total};
+  }
+
+  /* Lo que ya salió de la cuenta este mes: gastos sin tarjeta de crédito y pagos de tarjeta. */
+  function salidoMes(mes){
+    var t = 0;
+    D().movimientos.forEach(function(m){
+      if(m.fecha.slice(0,7) === mes && !APP.esCredito(m.medio)){ t += m.monto; }
+    });
+    D().pagosTarjeta.forEach(function(p){ if(p.fecha.slice(0,7) === mes){ t += p.monto; } });
+    return t;
   }
 
   /* ---------- aviso de ciclo al registrar ---------- */
@@ -150,7 +154,7 @@
     e.textContent = "Entra al corte del " + diaLargo(corteF) + " · lo pagás el " + diaLargo(fechaPago(t, corteF)) + ".";
   };
 
-  /* ---------- pantalla: caja ---------- */
+  /* ---------- pantalla: ingresos y caja ---------- */
   function lineaSimple(cont, etiqueta, detalle, monto){
     var d = document.createElement("div");
     d.className = "linea";
@@ -164,135 +168,155 @@
     d.querySelector(".ci").textContent = Q(monto);
     cont.appendChild(d);
   }
-  function bloqueCaja(cont, titulo, mes, pie){
-    var c = caja(mes);
+  function rotulo(cont, texto){
     var r = document.createElement("p");
-    r.className = "subrotulo"; r.textContent = titulo;
+    r.className = "subrotulo"; r.textContent = texto;
     cont.appendChild(r);
+  }
+  function bloque(cont, monto, pie){
     var b = document.createElement("div");
     b.className = "bloque";
     b.innerHTML = '<div class="cifra ng"></div><div class="pe"></div>';
-    b.querySelector(".ng").textContent = Q(c.total);
+    b.querySelector(".ng").textContent = Q(monto);
     b.querySelector(".pe").textContent = pie;
     cont.appendChild(b);
-    c.tarjetas.forEach(function(t){
-      var det = "vence el " + diaLargo(t.vence);
-      if(t.abierto){ det += " · ciclo aún abierto"; }
-      if(t.incompleto){ det += " · incompleto"; }
-      lineaSimple(cont, t.nombre, det, t.monto);
-    });
-    lineaSimple(cont, "Fijos y cuotas", "sin tarjeta de crédito", c.fijos);
-    lineaSimple(cont, "Variables", "presupuestado", c.variables);
-    return c;
-  }
-
-  function filaFuente(f){
-    var d = document.createElement("div");
-    d.className = "cfgT";
-    d.setAttribute("data-id", f.id);
-    d.innerHTML = '<input type="text" class="fn" aria-label="Nombre de la fuente"><button class="quitar" type="button">Quitar</button>';
-    d.querySelector(".fn").value = f.nombre;
-    d.querySelector(".quitar").addEventListener("click", function(){ d.remove(); });
-    return d;
+    return b;
   }
 
   function pintarCaja(){
     var mes = mesDe(), prox = mesSiguiente(mes);
+    var nMes = soloMes(mes), nProx = soloMes(prox);
     $("sCaja").textContent = nombreMes(mes);
-    var hoy = new Date();
-    var quedan = new Date(hoy.getFullYear(), hoy.getMonth()+1, 0).getDate() - hoy.getDate();
-    var c1 = $("cajaHoy"); c1.innerHTML = "";
-    var caja1 = bloqueCaja(c1, "TE FALTA PAGAR EN " + soloMes(mes).toUpperCase(), mes,
-      "de una sola cuenta · quedan " + quedan + (quedan === 1 ? " día" : " días") + " del mes");
-    var c2 = $("cajaProx"); c2.innerHTML = "";
-    var caja2 = bloqueCaja(c2, "NECESITARÁS EN " + soloMes(prox).toUpperCase(), prox,
-      "tenelo en la cuenta al arrancar el mes");
 
-    var c3 = $("ingresosMes"); c3.innerHTML = "";
-    var r = document.createElement("p");
-    r.className = "subrotulo";
-    r.textContent = "INGRESOS DE " + soloMes(mes).toUpperCase();
-    c3.appendChild(r);
-    var total = ingresoMes(mes);
-    var b = document.createElement("div");
-    b.className = "bloque";
-    b.innerHTML = '<div class="cifra ng"></div><div class="pe"></div>';
-    b.querySelector(".ng").textContent = Q(total);
-    b.querySelector(".pe").textContent = total > 0
-      ? "entraron este mes · cubriendo lo de " + soloMes(mes).toLowerCase() + " te quedan " +
-        Q(Math.max(total - caja1.total, 0)) + " · " + soloMes(prox).toLowerCase() + " pide " + Q(caja2.total)
-      : "todavía no registraste ingresos este mes";
-    c3.appendChild(b);
-
-    D().ingresos.filter(function(i){ return i.fecha.slice(0,7) === mes; })
-      .sort(function(a, b2){ return a.fecha < b2.fecha ? 1 : -1; })
-      .forEach(function(i){
-        var fu = D().fuentes.filter(function(x){ return x.id === i.fuenteId; })[0];
-        var d = document.createElement("div");
-        d.className = "linea";
-        d.innerHTML = '<span class="et"></span><span style="display:flex;gap:10px;align-items:baseline"><span class="ci"></span><button class="quitar" type="button">Borrar</button></span>';
-        d.querySelector(".et").appendChild(document.createTextNode((fu ? fu.nombre : "Otra") + " "));
-        var s = document.createElement("small");
-        s.textContent = "· " + APP.diaCorto(i.fecha) + (i.nota ? " · " + i.nota : "");
-        d.querySelector(".et").appendChild(s);
-        d.querySelector(".ci").textContent = Q(i.monto);
-        d.querySelector(".quitar").addEventListener("click", function(){
-          if(!confirm("¿Borrar este ingreso?")) return;
-          D().ingresos = D().ingresos.filter(function(x){ return x.id !== i.id; });
-          APP.guardar(); pintarCaja();
-        });
-        c3.appendChild(d);
-      });
-
-    var sel = $("inFuente");
-    sel.innerHTML = "";
+    /* ingresos por fuente */
+    var ci = $("cIngresos"); ci.innerHTML = "";
+    var totalIng = ingresoMes(mes);
+    rotulo(ci, "INGRESOS DE " + nMes.toUpperCase());
+    bloque(ci, totalIng, totalIng > 0 ? "lo que entró este mes" : "tocá una fuente para registrar lo que entra");
     D().fuentes.forEach(function(f){
-      var o = document.createElement("option");
-      o.value = f.id; o.textContent = f.nombre;
-      sel.appendChild(o);
+      var monto = D().ingresos.reduce(function(t, i){
+        return (i.fuenteId === f.id && i.fecha.slice(0,7) === mes) ? t + i.monto : t;
+      }, 0);
+      var n = D().ingresos.filter(function(i){ return i.fuenteId === f.id && i.fecha.slice(0,7) === mes; }).length;
+      var b = document.createElement("button");
+      b.className = "fila ingFila";
+      b.innerHTML = '<span class="top"><span class="nom"></span><span class="cifra val"></span></span><span class="nota"></span>';
+      b.querySelector(".nom").textContent = f.nombre;
+      b.querySelector(".val").textContent = Q(monto);
+      b.querySelector(".nota").textContent = n ? n + (n === 1 ? " registro" : " registros") + " · tocá para agregar otro" : "tocá para registrar";
+      b.addEventListener("click", function(){ abrirIngreso(f.id); });
+      ci.appendChild(b);
     });
-    var cf = $("cfgFuentes");
-    cf.innerHTML = "";
-    D().fuentes.forEach(function(f){ cf.appendChild(filaFuente(f)); });
-  }
-  APP.alMostrar.caja = function(){ $("formIngreso").hidden = true; pintarCaja(); };
+    var af = document.createElement("button");
+    af.type = "button"; af.className = "agregar";
+    af.textContent = "+ Agregar fuente";
+    af.addEventListener("click", function(){
+      var nombre = prompt("Nombre de la nueva fuente de ingreso");
+      if(!nombre || !nombre.trim()) return;
+      nombre = nombre.trim();
+      if(D().fuentes.some(function(x){ return APP.norm(x.nombre) === APP.norm(nombre); })){
+        alert("Ya tenés una fuente con ese nombre."); return;
+      }
+      D().fuentes.push({id:nid(), nombre:nombre});
+      APP.guardar(); pintarCaja();
+    });
+    ci.appendChild(af);
 
-  $("btnNuevoIngreso").addEventListener("click", function(){
-    var f = $("formIngreso");
-    f.hidden = !f.hidden;
-    if(!f.hidden){
-      $("inMonto").value = ""; $("inNota").value = "";
-      $("inFecha").value = hoyISO();
-      $("inMonto").focus();
-    }
-  });
-  $("guardarIngreso").addEventListener("click", function(){
-    var monto = parseFloat($("inMonto").value);
+    /* por pagar este mes */
+    var cp = $("cPagar"); cp.innerHTML = "";
+    var c1 = caja(mes);
+    rotulo(cp, "POR PAGAR EN " + nMes.toUpperCase());
+    bloque(cp, c1.total, c1.items.length ? "lo que todavía tiene que salir de tu cuenta este mes" : "no tenés pagos pendientes con monto asignado");
+    c1.items.forEach(function(x){ lineaSimple(cp, x.nombre, x.detalle, x.monto); });
+
+    /* balance */
+    var cb = $("cBalance"); cb.innerHTML = "";
+    var salido = salidoMes(mes);
+    var bal = totalIng - salido - c1.total;
+    rotulo(cb, "BALANCE DE " + nMes.toUpperCase());
+    var bb = bloque(cb, Math.abs(bal), bal >= 0 ? "te sobran después de pagar todo" : "te faltan para cubrir todo");
+    if(bal < 0){ bb.querySelector(".ng").style.color = "var(--alerta)"; bb.querySelector(".pe").style.color = "var(--alerta)"; }
+    lineaSimple(cb, "Entró", "", totalIng);
+    lineaSimple(cb, "Ya salió", "gastos sin tarjeta de crédito y pagos de tarjeta", salido);
+    lineaSimple(cb, "Falta pagar", "", c1.total);
+
+    /* próximo mes */
+    var cx = $("cProx"); cx.innerHTML = "";
+    var c2 = caja(prox);
+    rotulo(cx, "PARA " + nProx.toUpperCase());
+    bloque(cx, c2.total, "lo que deberías tener en tu cuenta el 1 de " + nProx.toLowerCase());
+    c2.items.forEach(function(x){ lineaSimple(cx, x.nombre, x.detalle, x.monto); });
+  }
+  APP.alMostrar.caja = pintarCaja;
+
+  /* ---------- hoja: ingreso por fuente ---------- */
+  var fuenteActual = null;
+  function abrirIngreso(id){
+    fuenteActual = D().fuentes.filter(function(f){ return f.id === id; })[0];
+    if(!fuenteActual) return;
+    $("tIng").textContent = fuenteActual.nombre;
+    $("iMonto").value = ""; $("iNota").value = "";
+    $("iFecha").value = hoyISO();
+    pintarIngresos();
+    APP.abrir("hojaIng");
+    setTimeout(function(){ $("iMonto").focus(); }, 300);
+  }
+  function pintarIngresos(){
+    var mes = mesDe();
+    var regs = D().ingresos.filter(function(i){ return i.fuenteId === fuenteActual.id && i.fecha.slice(0,7) === mes; })
+      .sort(function(a, b){ return a.fecha < b.fecha ? 1 : -1; });
+    var total = regs.reduce(function(t, i){ return t + i.monto; }, 0);
+    $("sIng").textContent = "Llevás " + Q(total) + " en " + soloMes(mes).toLowerCase();
+    $("iRotulo").hidden = !regs.length;
+    var l = $("iLista"); l.innerHTML = "";
+    regs.forEach(function(i){
+      var d = document.createElement("div");
+      d.className = "mov";
+      d.innerHTML = '<span><span class="nm"></span><small></small></span><span class="der"><span class="cifra mt"></span><button class="quitar" type="button">Borrar</button></span>';
+      d.querySelector(".nm").textContent = APP.diaCorto(i.fecha);
+      d.querySelector("small").textContent = i.nota || "";
+      d.querySelector(".mt").textContent = Q(i.monto);
+      d.querySelector(".quitar").addEventListener("click", function(){
+        if(!confirm("¿Borrar este ingreso?")) return;
+        D().ingresos = D().ingresos.filter(function(x){ return x.id !== i.id; });
+        APP.guardar(); pintarIngresos(); pintarCaja();
+      });
+      l.appendChild(d);
+    });
+  }
+  $("iGuardar").addEventListener("click", function(){
+    var monto = parseFloat($("iMonto").value);
     if(!(monto > 0)){ alert("Escribí un monto mayor que cero."); return; }
-    var f = $("inFecha").value;
+    var f = $("iFecha").value;
     if(!f){ alert("Elegí una fecha."); return; }
-    if(!$("inFuente").value){ alert("Agregá primero una fuente de ingreso."); return; }
-    var ing = {id:nid(), fuenteId:$("inFuente").value, monto:monto, fecha:new Date(f + "T12:00:00").toISOString()};
-    var nota = $("inNota").value.trim();
+    var ing = {id:nid(), fuenteId:fuenteActual.id, monto:monto, fecha:new Date(f + "T12:00:00").toISOString()};
+    var nota = $("iNota").value.trim();
     if(nota){ ing.nota = nota; }
     D().ingresos.push(ing);
-    APP.guardar();
-    $("formIngreso").hidden = true;
-    pintarCaja();
+    APP.guardar(); APP.pintar(); pintarCaja();
+    APP.cerrarTodo();
   });
-  $("agregarFuente").addEventListener("click", function(){
-    var d = filaFuente({id:nid(), nombre:""});
-    $("cfgFuentes").appendChild(d);
-    d.querySelector(".fn").focus();
-  });
-  $("guardarFuentes").addEventListener("click", function(){
-    var nuevas = [];
-    Array.prototype.forEach.call($("cfgFuentes").querySelectorAll(".cfgT"), function(d){
-      var n = d.querySelector(".fn").value.trim();
-      if(n){ nuevas.push({id:d.getAttribute("data-id"), nombre:n}); }
-    });
-    D().fuentes = nuevas;
+  $("iRenombrar").addEventListener("click", function(){
+    var nombre = prompt("Nuevo nombre para " + fuenteActual.nombre, fuenteActual.nombre);
+    if(!nombre || !nombre.trim()) return;
+    nombre = nombre.trim();
+    if(D().fuentes.some(function(x){ return x.id !== fuenteActual.id && APP.norm(x.nombre) === APP.norm(nombre); })){
+      alert("Ya tenés una fuente con ese nombre."); return;
+    }
+    fuenteActual.nombre = nombre;
+    $("tIng").textContent = nombre;
     APP.guardar(); pintarCaja();
+  });
+  $("iEliminar").addEventListener("click", function(){
+    var n = D().ingresos.filter(function(i){ return i.fuenteId === fuenteActual.id; }).length;
+    var msg = n ? "¿Eliminar " + fuenteActual.nombre + "? Sus " + n + " ingresos registrados también se borran."
+                : "¿Eliminar " + fuenteActual.nombre + "?";
+    if(!confirm(msg)) return;
+    var id = fuenteActual.id;
+    D().fuentes = D().fuentes.filter(function(f){ return f.id !== id; });
+    D().ingresos = D().ingresos.filter(function(i){ return i.fuenteId !== id; });
+    APP.guardar(); APP.pintar(); pintarCaja();
+    APP.cerrarTodo();
   });
 
   /* ---------- pantalla: tarjetas ---------- */

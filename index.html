@@ -235,6 +235,15 @@
   .cSub .cuo{display:flex;gap:8px;margin-top:8px}
   .cSub .cuo input{flex:1}
   .cSub select{font-size:13px;padding:6px}
+  .filaAcc{display:flex;gap:18px;padding:10px 0 4px;border-top:1px dashed var(--linea)}
+  .filaAcc button{background:none;border:0;color:var(--suave);font:inherit;font-size:14px;padding:4px 0;cursor:pointer;text-decoration:underline}
+  .filaAcc button.peligro{color:var(--alerta)}
+  .agregarCat{
+    display:block;width:100%;text-align:left;margin-top:14px;padding:16px 0;
+    background:none;border:0;border-top:1.5px dashed var(--suave);border-bottom:1.5px dashed var(--suave);
+    color:var(--suave);font:inherit;font-size:16px;cursor:pointer;
+  }
+  .ingFila .val{font-size:22px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -249,7 +258,6 @@
   </div>
   <div class="segunda" id="totalSegunda"></div>
   <div id="avisos"></div>
-  <button class="principal" id="btnRegistrar">+ Registrar gasto</button>
   <div id="tablero"></div>
 </section>
 
@@ -270,25 +278,10 @@
 <!-- ===== Caja ===== -->
 <section class="vista" id="v-caja" hidden>
   <header><h1>Ingresos y caja</h1><span class="mes" id="sCaja"></span></header>
-  <div id="cajaHoy"></div>
-  <div id="cajaProx"></div>
-  <div id="ingresosMes"></div>
-  <button class="txt" id="btnNuevoIngreso" style="margin-top:16px">Registrar un ingreso</button>
-  <div id="formIngreso" hidden style="margin-top:6px">
-    <label class="etiq" for="inMonto">MONTO</label>
-    <input type="number" id="inMonto" inputmode="decimal" min="0" step="0.01">
-    <label class="etiq" for="inFuente">FUENTE</label>
-    <select id="inFuente"></select>
-    <label class="etiq" for="inFecha">FECHA</label>
-    <input type="date" id="inFecha">
-    <label class="etiq" for="inNota">NOTA (OPCIONAL)</label>
-    <input type="text" id="inNota" autocomplete="off">
-    <button class="principal" id="guardarIngreso">Guardar ingreso</button>
-  </div>
-  <p class="subrotulo">FUENTES DE INGRESO</p>
-  <div id="cfgFuentes"></div>
-  <button class="txt" id="agregarFuente" style="margin-top:12px">Agregar fuente</button>
-  <button class="principal" id="guardarFuentes">Guardar fuentes</button>
+  <div id="cIngresos"></div>
+  <div id="cPagar"></div>
+  <div id="cBalance"></div>
+  <div id="cProx"></div>
 </section>
 
 <!-- ===== Tarjetas ===== -->
@@ -394,6 +387,40 @@
   </div>
   <button class="secundaria" id="verNota" style="text-align:left;padding-left:0">+ agregar nota</button>
   <button class="principal" id="btnGuardar" disabled>Guardar gasto</button>
+</section>
+
+<!-- ===== Hoja: ingreso ===== -->
+<section class="hoja" id="hojaIng" role="dialog" aria-modal="true" aria-labelledby="tIng">
+  <h2 id="tIng">Ingreso</h2>
+  <p class="sub" id="sIng"></p>
+  <label class="etiq" for="iMonto">MONTO</label>
+  <input type="number" id="iMonto" inputmode="decimal" min="0" step="0.01" placeholder="Q0">
+  <label class="etiq" for="iFecha">FECHA</label>
+  <input type="date" id="iFecha">
+  <label class="etiq" for="iNota">NOTA (OPCIONAL)</label>
+  <input type="text" id="iNota" autocomplete="off" placeholder="Venta de chaqueta">
+  <button class="principal" id="iGuardar">Guardar ingreso</button>
+  <p class="subrotulo" id="iRotulo">REGISTROS DE ESTE MES</p>
+  <div id="iLista"></div>
+  <div class="filaAcc">
+    <button type="button" id="iRenombrar">Cambiar nombre</button>
+    <button type="button" id="iEliminar" class="peligro">Eliminar fuente</button>
+  </div>
+</section>
+
+<!-- ===== Hoja: nueva o editar categoría ===== -->
+<section class="hoja" id="hojaCatEd" role="dialog" aria-modal="true" aria-labelledby="tCatEd">
+  <h2 id="tCatEd">Nueva categoría</h2>
+  <label class="etiq" for="ceNombre">NOMBRE</label>
+  <input type="text" id="ceNombre" autocomplete="off" placeholder="Mascotas">
+  <span class="etiq">CÓMO SE COMPORTA</span>
+  <div class="segm" id="ceComp">
+    <button type="button" data-v="fijo">Fijo</button>
+    <button type="button" data-v="variable">Variable</button>
+    <button type="button" data-v="ahorro">Ahorro</button>
+  </div>
+  <p class="segunda" id="ceAyuda"></p>
+  <button class="principal" id="ceGuardar">Guardar</button>
 </section>
 
 <!-- ===== Hoja: movimientos ===== -->

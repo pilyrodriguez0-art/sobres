@@ -287,7 +287,7 @@ var APP = (function(){
     if(b){ mostrarTab(b.getAttribute("data-tab")); }
   });
 
-  var HOJAS = ["hojaReg","hojaHist","hojaCat","hojaResp"];
+  var HOJAS = ["hojaReg","hojaHist","hojaCat","hojaResp","hojaIng","hojaCatEd"];
   function abrir(id){ $("fondo").classList.add("ver"); $(id).classList.add("ver"); $(id).scrollTop = 0; }
   function cerrarTodo(){
     $("fondo").classList.remove("ver");
@@ -412,8 +412,18 @@ var APP = (function(){
       var ag = document.createElement("button");
       ag.type = "button"; ag.className = "agregar";
       ag.setAttribute("data-agregar", c.id);
-      ag.textContent = "+ agregar en " + c.nombre;
+      ag.textContent = "+ agregar subcategoría";
       cont.appendChild(ag);
+      var acc = document.createElement("div");
+      acc.className = "filaAcc";
+      var bRen = document.createElement("button");
+      bRen.type = "button"; bRen.textContent = "Cambiar nombre";
+      bRen.setAttribute("data-renombrar", c.id);
+      var bEli = document.createElement("button");
+      bEli.type = "button"; bEli.className = "peligro"; bEli.textContent = "Eliminar categoría";
+      bEli.setAttribute("data-eliminar", c.id);
+      acc.appendChild(bRen); acc.appendChild(bEli);
+      cont.appendChild(acc);
 
       var plegada = datos.plegados["cat-" + c.id] !== false;
       if(plegada){ cont.hidden = true; }
@@ -439,7 +449,11 @@ var APP = (function(){
       tab.appendChild(cab);
       tab.appendChild(cont);
     });
-    if(tab.lastElementChild){ tab.lastElementChild.style.borderBottom = "1px solid var(--linea)"; }
+    var nueva = document.createElement("button");
+    nueva.type = "button"; nueva.className = "agregarCat";
+    nueva.setAttribute("data-nuevacat", "1");
+    nueva.textContent = "+ Agregar nueva categoría";
+    tab.appendChild(nueva);
 
     $("totalGasto").textContent = Q(totalGas);
     var pie = ["llevás gastado este mes"];
@@ -456,6 +470,11 @@ var APP = (function(){
   }
 
   $("tablero").addEventListener("click", function(e){
+    if(e.target.closest("button[data-nuevacat]")){ abrirCatEd(null); return; }
+    var ren = e.target.closest("button[data-renombrar]");
+    if(ren){ abrirCatEd(ren.getAttribute("data-renombrar")); return; }
+    var eli = e.target.closest("button[data-eliminar]");
+    if(eli){ eliminarCategoria(eli.getAttribute("data-eliminar")); return; }
     var ag = e.target.closest("button[data-agregar]");
     if(ag){ abrirRegistro(ag.getAttribute("data-agregar"), null, true); return; }
     var sec = e.target.closest("button.seccion");
@@ -471,7 +490,61 @@ var APP = (function(){
       if(s){ abrirRegistro(s.catId, s.id, false); }
     }
   });
-  $("btnRegistrar").addEventListener("click", function(){ abrirRegistro(null, null, false); });
+
+  /* ---------- crear, renombrar y eliminar categorías ---------- */
+  var catEditando = null, compElegido = "variable";
+  var AYUDA_COMP = {
+    fijo: "Mismo monto cada mes, como la renta. Se marca como pagado.",
+    variable: "Cambia mes a mes, como el súper. Se registra y se va sumando.",
+    ahorro: "No se gasta: se va llenando hasta una meta."
+  };
+  function pintarComp(){
+    Array.prototype.forEach.call($("ceComp").querySelectorAll("button"), function(b){
+      b.setAttribute("aria-pressed", b.getAttribute("data-v") === compElegido ? "true" : "false");
+    });
+    $("ceAyuda").textContent = AYUDA_COMP[compElegido];
+  }
+  function abrirCatEd(id){
+    catEditando = id ? catDe(id) : null;
+    $("tCatEd").textContent = catEditando ? "Editar categoría" : "Nueva categoría";
+    $("ceNombre").value = catEditando ? catEditando.nombre : "";
+    compElegido = catEditando ? catEditando.comp : "variable";
+    pintarComp();
+    abrir("hojaCatEd");
+    setTimeout(function(){ $("ceNombre").focus(); }, 300);
+  }
+  $("ceComp").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-v]"); if(!b) return;
+    compElegido = b.getAttribute("data-v"); pintarComp();
+  });
+  $("ceGuardar").addEventListener("click", function(){
+    var nombre = $("ceNombre").value.trim().replace(/\s+/g," ");
+    if(!nombre){ alert("Escribí un nombre."); return; }
+    var otra = datos.categorias.filter(function(c){
+      return norm(c.nombre) === norm(nombre) && (!catEditando || c.id !== catEditando.id);
+    })[0];
+    if(otra){ alert("Ya tenés una categoría llamada " + otra.nombre + "."); return; }
+    if(catEditando){
+      catEditando.nombre = nombre;
+      catEditando.comp = compElegido;
+    }else{
+      var c = {id:"c-" + nid(), nombre:nombre, comp:compElegido};
+      datos.categorias.push(c);
+      datos.plegados["cat-" + c.id] = false;
+    }
+    guardar(); pintar(); cerrarTodo();
+  });
+  function eliminarCategoria(id){
+    var c = catDe(id); if(!c) return;
+    var n = datos.subs.filter(function(s){ return s.catId === id; }).length;
+    var msg = n
+      ? "¿Eliminar " + c.nombre + " y sus " + n + (n === 1 ? " subcategoría" : " subcategorías") + "? Los gastos ya registrados quedan en el historial."
+      : "¿Eliminar " + c.nombre + "?";
+    if(!confirm(msg)) return;
+    datos.categorias = datos.categorias.filter(function(x){ return x.id !== id; });
+    datos.subs = datos.subs.filter(function(s){ return s.catId !== id; });
+    guardar(); pintar();
+  }
 
   function aviso(texto, accion, etiqueta){
     var d = document.createElement("div");
@@ -1135,6 +1208,7 @@ var APP = (function(){
     mesDe: mesDe, mesSiguiente: mesSiguiente, nombreMes: nombreMes, soloMes: soloMes,
     diaCorto: diaCorto, diaLargo: diaLargo,
     medios: medios, guardar: guardar, pintar: pintar, mostrarTab: mostrarTab, alMostrar: alMostrar,
+    abrir: abrir, cerrarTodo: cerrarTodo, norm: norm,
     presu: presu, gastadoSub: gastadoSub, gastadoCat: gastadoCat, esperado: esperado,
     subsDe: subsDe, subDe: subDe, catDe: catDe, compDe: compDe, refCat: refCat,
     datosRef: function(){ return datos; },

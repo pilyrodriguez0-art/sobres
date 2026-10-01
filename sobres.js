@@ -434,12 +434,10 @@ var APP = (function(){
       cab.querySelector(".editar").setAttribute("data-editar", c.id);
       cab.querySelector(".editar").setAttribute("aria-label", "Editar " + c.nombre);
       cab.querySelector(".val").textContent = Q(gas);
-      var n = subs.length;
-      var cuenta = n ? n + (n === 1 ? " subcategoría" : " subcategorías") : "sin subcategorías";
-      var etiqueta = c.comp === "ahorro" ? "juntado" : "gastado";
+      var etiqueta = c.comp === "ahorro" ? "Juntado " : "Gastado ";
       cab.querySelector(".nota").textContent = ref > 0
-        ? etiqueta + " · de " + Q(ref) + " · " + cuenta
-        : etiqueta + " · " + c.comp + " · " + cuenta;
+        ? etiqueta + Q(gas) + " de " + Q(ref) + (c.comp === "ahorro" ? " de meta" : " presupuestados")
+        : etiqueta + Q(gas) + " · sin presupuesto";
       if(c.comp !== "ahorro" && ref > 0 && gas > ref){ cab.className += " pasado"; }
 
       tab.appendChild(cab);

@@ -115,10 +115,10 @@
       /* fijos y cuotas, uno por uno */
       subs.forEach(function(s){
         if(APP.compDe(s) !== "fijo") return;
+        /* si ya se pagó este mes, el recibo real reemplaza al estimado: no queda nada pendiente */
+        if(esteMes && APP.gastadoSub(s.id, mes) > 0) return;
         if(APP.esCredito(medioHabitual(uno(s.id)))) return;
-        var esp = APP.esperado(s, mp);
-        var falta = esteMes ? esp - APP.gastadoSub(s.id, mes) : esp;
-        suma(s.nombre, s.cuotas ? "cuota · " + c.nombre : c.nombre, falta);
+        suma(s.nombre, s.cuotas ? "cuota · " + c.nombre : c.nombre, APP.esperado(s, mp));
       });
       if(c.comp === "fijo") return;
       /* lo que queda del presupuesto de la categoría */
@@ -188,6 +188,22 @@
     var nMes = soloMes(mes), nProx = soloMes(prox);
     $("sCaja").textContent = nombreMes(mes);
 
+    /* saldo con que arrancó el mes */
+    var cs = $("cSaldo"); cs.innerHTML = "";
+    var saldo = typeof D().saldos[mes] === "number" ? D().saldos[mes] : null;
+    rotulo(cs, "SALDO AL 1 DE " + nMes.toUpperCase());
+    var bs = document.createElement("div");
+    bs.className = "bloque";
+    bs.innerHTML = '<div class="saldoCampo"><span>Q</span><input type="number" id="inSaldo" inputmode="decimal" step="0.01" placeholder="0" aria-label="Saldo en el banco al 1 del mes"></div>' +
+                   '<div class="pe">lo que tenías en tu cuenta del banco ese día · no es un ingreso</div>';
+    if(saldo !== null){ bs.querySelector("input").value = saldo; }
+    bs.querySelector("input").addEventListener("change", function(){
+      var v = parseFloat(this.value);
+      if(isNaN(v)){ delete D().saldos[mes]; } else { D().saldos[mes] = v; }
+      APP.guardar(); pintarCaja();
+    });
+    cs.appendChild(bs);
+
     /* ingresos por fuente */
     var ci = $("cIngresos"); ci.innerHTML = "";
     var totalIng = ingresoMes(mes);
@@ -232,12 +248,13 @@
     /* balance */
     var cb = $("cBalance"); cb.innerHTML = "";
     var salido = salidoMes(mes);
-    var bal = totalIng - salido - c1.total;
+    var bal = (saldo || 0) + totalIng - salido - c1.total;
     rotulo(cb, "BALANCE DE " + nMes.toUpperCase());
     var bb = bloque(cb, Math.abs(bal), bal >= 0 ? "te sobran después de pagar todo" : "te faltan para cubrir todo");
     if(bal < 0){ bb.querySelector(".ng").style.color = "var(--alerta)"; bb.querySelector(".pe").style.color = "var(--alerta)"; }
-    lineaSimple(cb, "Entró", "", totalIng);
-    lineaSimple(cb, "Ya salió", "gastos sin tarjeta de crédito y pagos de tarjeta", salido);
+    lineaSimple(cb, "Saldo al 1 de " + nMes.toLowerCase(), saldo === null ? "todavía no lo escribiste" : "", saldo || 0);
+    lineaSimple(cb, "Entró", "ingresos del mes", totalIng);
+    lineaSimple(cb, "Ya salió", "lo pagado con débito, efectivo, transferencia y pagos de tarjeta", salido);
     lineaSimple(cb, "Falta pagar", "", c1.total);
 
     /* próximo mes */

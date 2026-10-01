@@ -86,7 +86,7 @@ var APP = (function(){
         {id:nid(), nombre:"Tarjeta de crédito", tipo:"credito", red:"Visa", color:null, corte:null, pago:null},
         {id:nid(), nombre:"Tarjeta de débito",  tipo:"debito",  red:"Visa", color:null, corte:null, pago:null}
       ],
-      pagosTarjeta:[], montosCorte:{}, cortesPagados:{}, plegados:{}
+      pagosTarjeta:[], montosCorte:{}, cortesPagados:{}, plegados:{}, saldos:{}
     };
   }
 
@@ -115,7 +115,7 @@ var APP = (function(){
   }
 
   function normalizar(){
-    ["presupuestos","montosCorte","cortesPagados","plegados"].forEach(function(k){ if(!datos[k]){ datos[k] = {}; } });
+    ["presupuestos","montosCorte","cortesPagados","plegados","saldos"].forEach(function(k){ if(!datos[k]){ datos[k] = {}; } });
     ["movimientos","ingresos","pagosTarjeta","subs","tarjetas"].forEach(function(k){ if(!datos[k]){ datos[k] = []; } });
     if(!datos.fuentes){ datos.fuentes = fuentesIniciales(); }
     if(!datos.categorias || !datos.categorias.length){ datos.categorias = copiaCats(); }
@@ -419,16 +419,21 @@ var APP = (function(){
       var plegada = datos.plegados["cat-" + c.id] !== false;
       if(plegada){ cont.hidden = true; }
 
-      var cab = filaHTML();
-      cab.className = "fila seccion";
+      var cab = document.createElement("div");
+      cab.className = "seccion";
       cab.setAttribute("data-cat", c.id);
-      cab.setAttribute("aria-expanded", plegada ? "false" : "true");
-      cab.querySelector(".nom").textContent = c.nombre;
+      cab.innerHTML = '<div class="top"><span class="izq"><button type="button" class="tog"></button>' +
+                      '<button type="button" class="editar">Editar</button></span>' +
+                      '<span class="cifra val"></span></div><div class="nota"></div>';
+      var tog = cab.querySelector(".tog");
+      tog.setAttribute("aria-expanded", plegada ? "false" : "true");
+      tog.textContent = c.nombre;
       var chev = document.createElement("span");
       chev.className = "chev"; chev.textContent = plegada ? "▸" : "▾";
-      cab.querySelector(".nom").appendChild(chev);
+      tog.appendChild(chev);
+      cab.querySelector(".editar").setAttribute("data-editar", c.id);
+      cab.querySelector(".editar").setAttribute("aria-label", "Editar " + c.nombre);
       cab.querySelector(".val").textContent = Q(gas);
-      sinBarra(cab);
       var n = subs.length;
       var cuenta = n ? n + (n === 1 ? " subcategoría" : " subcategorías") : "sin subcategorías";
       var etiqueta = c.comp === "ahorro" ? "juntado" : "gastado";
@@ -437,7 +442,7 @@ var APP = (function(){
         : etiqueta + " · " + c.comp + " · " + cuenta;
       if(c.comp !== "ahorro" && ref > 0 && gas > ref){ cab.className += " pasado"; }
 
-      tab.appendChild(envolverConEditar(cab, c.id));
+      tab.appendChild(cab);
       tab.appendChild(cont);
     });
     var nueva = document.createElement("button");
@@ -460,24 +465,11 @@ var APP = (function(){
     $("totalSegunda").textContent = seg;
   }
 
-  /* Encabezado de categoría con su botón Editar al lado. */
-  function envolverConEditar(cab, catId){
-    var w = document.createElement("div");
-    w.className = "catCab";
-    w.appendChild(cab);
-    var ed = document.createElement("button");
-    ed.type = "button"; ed.className = "editar";
-    ed.setAttribute("data-editar", catId);
-    ed.textContent = "Editar";
-    w.appendChild(ed);
-    return w;
-  }
-
   $("tablero").addEventListener("click", function(e){
     if(e.target.closest("button[data-nuevacat]")){ abrirEdCat(null); return; }
     var ed = e.target.closest("button[data-editar]");
     if(ed){ abrirEdCat(ed.getAttribute("data-editar")); return; }
-    var sec = e.target.closest("button.seccion");
+    var sec = e.target.closest(".seccion");
     if(sec){
       var k = "cat-" + sec.getAttribute("data-cat");
       datos.plegados[k] = datos.plegados[k] === false ? true : false;
@@ -1135,7 +1127,7 @@ var APP = (function(){
     if(!confirm("Se borran todos los gastos, ingresos, presupuestos y pagos de tarjeta. Se conservan tus categorías, subcategorías y tarjetas. ¿Seguir?")) return;
     if(!confirm("No se puede deshacer. Si querés, primero copiá el Respaldo. ¿Borrar ahora?")) return;
     datos.movimientos = []; datos.ingresos = []; datos.presupuestos = {};
-    datos.pagosTarjeta = []; datos.montosCorte = {}; datos.cortesPagados = {};
+    datos.pagosTarjeta = []; datos.montosCorte = {}; datos.cortesPagados = {}; datos.saldos = {};
     datos.inicio = mesDe(); datos.visto = mesDe(); datos.inicioRegistro = aISO(new Date());
     guardar(); pintar();
     mostrarTab("sobres");

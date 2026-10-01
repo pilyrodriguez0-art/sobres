@@ -280,14 +280,14 @@ var APP = (function(){
     if(k === "sobres"){ pintar(); }
     if(k === "pres"){ pintarPres(); }
     if(alMostrar[k]){ alMostrar[k](); }
-    window.scrollTo(0, 0);
+    $("scroller").scrollTop = 0;
   }
   $("tabs").addEventListener("click", function(e){
     var b = e.target.closest("button[data-tab]");
     if(b){ mostrarTab(b.getAttribute("data-tab")); }
   });
 
-  var HOJAS = ["hojaReg","hojaHist","hojaCat","hojaResp","hojaIng","hojaCatEd"];
+  var HOJAS = ["hojaReg","hojaHist","hojaResp","hojaIng","hojaEdCat"];
   function abrir(id){ $("fondo").classList.add("ver"); $(id).classList.add("ver"); $(id).scrollTop = 0; }
   function cerrarTodo(){
     $("fondo").classList.remove("ver");
@@ -295,7 +295,7 @@ var APP = (function(){
   }
   $("fondo").addEventListener("click", cerrarTodo);
 
-  var ACCION_ARRIBA = { hojaCat: "cGuardar" };
+  var ACCION_ARRIBA = { hojaEdCat: "edGuardar" };
   HOJAS.forEach(function(id){
     var h = $(id), titulo = h.querySelector("h2");
     var barra = document.createElement("div");
@@ -409,21 +409,12 @@ var APP = (function(){
         if(comp === "fijo" && gastadoSub(s.id, mes) === 0 && esperado(s, mes) > 0){ fijosPend++; }
         if(comp === "variable" && presu(s.id, mes) > 0 && disponible(s, mes) - gastadoSub(s.id, mes) < 0){ pasados++; }
       });
-      var ag = document.createElement("button");
-      ag.type = "button"; ag.className = "agregar";
-      ag.setAttribute("data-agregar", c.id);
-      ag.textContent = "+ agregar subcategoría";
-      cont.appendChild(ag);
-      var acc = document.createElement("div");
-      acc.className = "filaAcc";
-      var bRen = document.createElement("button");
-      bRen.type = "button"; bRen.textContent = "Cambiar nombre";
-      bRen.setAttribute("data-renombrar", c.id);
-      var bEli = document.createElement("button");
-      bEli.type = "button"; bEli.className = "peligro"; bEli.textContent = "Eliminar categoría";
-      bEli.setAttribute("data-eliminar", c.id);
-      acc.appendChild(bRen); acc.appendChild(bEli);
-      cont.appendChild(acc);
+      if(!subs.length){
+        var vac = document.createElement("p");
+        vac.className = "nota"; vac.style.margin = "10px 0";
+        vac.textContent = "Sin subcategorías. Tocá Editar para agregar.";
+        cont.appendChild(vac);
+      }
 
       var plegada = datos.plegados["cat-" + c.id] !== false;
       if(plegada){ cont.hidden = true; }
@@ -446,7 +437,7 @@ var APP = (function(){
         : etiqueta + " · " + c.comp + " · " + cuenta;
       if(c.comp !== "ahorro" && ref > 0 && gas > ref){ cab.className += " pasado"; }
 
-      tab.appendChild(cab);
+      tab.appendChild(envolverConEditar(cab, c.id));
       tab.appendChild(cont);
     });
     var nueva = document.createElement("button");
@@ -469,14 +460,23 @@ var APP = (function(){
     $("totalSegunda").textContent = seg;
   }
 
+  /* Encabezado de categoría con su botón Editar al lado. */
+  function envolverConEditar(cab, catId){
+    var w = document.createElement("div");
+    w.className = "catCab";
+    w.appendChild(cab);
+    var ed = document.createElement("button");
+    ed.type = "button"; ed.className = "editar";
+    ed.setAttribute("data-editar", catId);
+    ed.textContent = "Editar";
+    w.appendChild(ed);
+    return w;
+  }
+
   $("tablero").addEventListener("click", function(e){
-    if(e.target.closest("button[data-nuevacat]")){ abrirCatEd(null); return; }
-    var ren = e.target.closest("button[data-renombrar]");
-    if(ren){ abrirCatEd(ren.getAttribute("data-renombrar")); return; }
-    var eli = e.target.closest("button[data-eliminar]");
-    if(eli){ eliminarCategoria(eli.getAttribute("data-eliminar")); return; }
-    var ag = e.target.closest("button[data-agregar]");
-    if(ag){ abrirRegistro(ag.getAttribute("data-agregar"), null, true); return; }
+    if(e.target.closest("button[data-nuevacat]")){ abrirEdCat(null); return; }
+    var ed = e.target.closest("button[data-editar]");
+    if(ed){ abrirEdCat(ed.getAttribute("data-editar")); return; }
     var sec = e.target.closest("button.seccion");
     if(sec){
       var k = "cat-" + sec.getAttribute("data-cat");
@@ -491,60 +491,162 @@ var APP = (function(){
     }
   });
 
-  /* ---------- crear, renombrar y eliminar categorías ---------- */
-  var catEditando = null, compElegido = "variable";
+  /* ---------- panel Editar: categoría y sus subcategorías ---------- */
+  var ed = null;   /* borrador: {catId, nombre, comp, subs:[{id, nombre, cuotas, nueva, borrar}]} */
   var AYUDA_COMP = {
     fijo: "Mismo monto cada mes, como la renta. Se marca como pagado.",
     variable: "Cambia mes a mes, como el súper. Se registra y se va sumando.",
     ahorro: "No se gasta: se va llenando hasta una meta."
   };
-  function pintarComp(){
-    Array.prototype.forEach.call($("ceComp").querySelectorAll("button"), function(b){
-      b.setAttribute("aria-pressed", b.getAttribute("data-v") === compElegido ? "true" : "false");
+
+  function abrirEdCat(catId){
+    var c = catId ? catDe(catId) : null;
+    ed = {
+      catId: c ? c.id : null,
+      nombre: c ? c.nombre : "",
+      comp: c ? c.comp : "variable",
+      subs: c ? datos.subs.filter(function(s){ return s.catId === c.id; }).map(function(s){
+        return {id:s.id, nombre:s.nombre, cuotas: s.cuotas ? {monto:s.cuotas.monto, hasta:s.cuotas.hasta} : null};
+      }) : []
+    };
+    $("tEdCat").textContent = c ? "Editar " + c.nombre : "Nueva categoría";
+    $("edEliminarCat").hidden = !c;
+    pintarEdCat();
+    abrir("hojaEdCat");
+    if(!c){ setTimeout(function(){ $("edNombre").focus(); }, 300); }
+  }
+
+  function pintarEdCat(){
+    $("edNombre").value = ed.nombre;
+    Array.prototype.forEach.call($("edComp").querySelectorAll("button"), function(b){
+      b.setAttribute("aria-pressed", b.getAttribute("data-v") === ed.comp ? "true" : "false");
     });
-    $("ceAyuda").textContent = AYUDA_COMP[compElegido];
-  }
-  function abrirCatEd(id){
-    catEditando = id ? catDe(id) : null;
-    $("tCatEd").textContent = catEditando ? "Editar categoría" : "Nueva categoría";
-    $("ceNombre").value = catEditando ? catEditando.nombre : "";
-    compElegido = catEditando ? catEditando.comp : "variable";
-    pintarComp();
-    abrir("hojaCatEd");
-    setTimeout(function(){ $("ceNombre").focus(); }, 300);
-  }
-  $("ceComp").addEventListener("click", function(e){
-    var b = e.target.closest("button[data-v]"); if(!b) return;
-    compElegido = b.getAttribute("data-v"); pintarComp();
-  });
-  $("ceGuardar").addEventListener("click", function(){
-    var nombre = $("ceNombre").value.trim().replace(/\s+/g," ");
-    if(!nombre){ alert("Escribí un nombre."); return; }
-    var otra = datos.categorias.filter(function(c){
-      return norm(c.nombre) === norm(nombre) && (!catEditando || c.id !== catEditando.id);
-    })[0];
-    if(otra){ alert("Ya tenés una categoría llamada " + otra.nombre + "."); return; }
-    if(catEditando){
-      catEditando.nombre = nombre;
-      catEditando.comp = compElegido;
-    }else{
-      var c = {id:"c-" + nid(), nombre:nombre, comp:compElegido};
-      datos.categorias.push(c);
-      datos.plegados["cat-" + c.id] = false;
+    $("edAyuda").textContent = AYUDA_COMP[ed.comp];
+    var l = $("edSubs");
+    l.innerHTML = "";
+    var vivas = ed.subs.filter(function(s){ return !s.borrar; });
+    if(!vivas.length){
+      var p = document.createElement("p");
+      p.className = "nota"; p.textContent = "Todavía no hay subcategorías.";
+      l.appendChild(p);
     }
-    guardar(); pintar(); cerrarTodo();
-  });
-  function eliminarCategoria(id){
-    var c = catDe(id); if(!c) return;
-    var n = datos.subs.filter(function(s){ return s.catId === id; }).length;
-    var msg = n
-      ? "¿Eliminar " + c.nombre + " y sus " + n + (n === 1 ? " subcategoría" : " subcategorías") + "? Los gastos ya registrados quedan en el historial."
-      : "¿Eliminar " + c.nombre + "?";
-    if(!confirm(msg)) return;
-    datos.categorias = datos.categorias.filter(function(x){ return x.id !== id; });
-    datos.subs = datos.subs.filter(function(s){ return s.catId !== id; });
-    guardar(); pintar();
+    vivas.forEach(function(s){
+      var d = document.createElement("div");
+      d.className = "edSub";
+      var r1 = document.createElement("div");
+      r1.className = "l1";
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.value = s.nombre; inp.placeholder = "Nombre";
+      inp.setAttribute("aria-label", "Nombre de la subcategoría");
+      inp.addEventListener("input", function(){ s.nombre = this.value; });
+      var del = document.createElement("button");
+      del.type = "button"; del.className = "quitar"; del.textContent = "Eliminar";
+      del.addEventListener("click", function(){
+        var n = s.nueva ? 0 : datos.movimientos.filter(function(m){ return m.subId === s.id; }).length;
+        if(n && !confirm("¿Eliminar " + (s.nombre || "esta subcategoría") + "? Sus " + n + " gastos quedan en el historial.")) return;
+        if(s.nueva){ ed.subs = ed.subs.filter(function(x){ return x !== s; }); } else { s.borrar = true; }
+        pintarEdCat();
+      });
+      r1.appendChild(inp); r1.appendChild(del);
+      d.appendChild(r1);
+
+      var lc = document.createElement("label");
+      lc.className = "check";
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.checked = !!s.cuotas;
+      cb.addEventListener("change", function(){
+        s.cuotas = this.checked ? {monto:0, hasta:""} : null;
+        pintarEdCat();
+      });
+      lc.appendChild(cb);
+      lc.appendChild(document.createTextNode(" Se paga en cuotas"));
+      d.appendChild(lc);
+
+      if(s.cuotas){
+        var cu = document.createElement("div");
+        cu.className = "dias";
+        cu.innerHTML = '<div><label class="etiq">MONTO DE CADA CUOTA</label><input type="number" class="cm" inputmode="decimal" min="0" step="0.01"></div>' +
+                       '<div><label class="etiq">ÚLTIMA CUOTA</label><input type="month" class="ch"></div>';
+        var cm = cu.querySelector(".cm"), ch = cu.querySelector(".ch");
+        if(s.cuotas.monto){ cm.value = s.cuotas.monto; }
+        ch.value = s.cuotas.hasta || "";
+        cm.addEventListener("input", function(){ s.cuotas.monto = parseFloat(this.value) || 0; });
+        ch.addEventListener("change", function(){ s.cuotas.hasta = this.value; });
+        d.appendChild(cu);
+      }
+      l.appendChild(d);
+    });
   }
+
+  $("edNombre").addEventListener("input", function(){ ed.nombre = this.value; });
+  $("edComp").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-v]"); if(!b) return;
+    ed.comp = b.getAttribute("data-v"); pintarEdCat();
+  });
+  $("edAgregarSub").addEventListener("click", function(){
+    ed.subs.push({id:nid(), nombre:"", cuotas:null, nueva:true});
+    pintarEdCat();
+    var ins = $("edSubs").querySelectorAll("input[type=text]");
+    if(ins.length){ ins[ins.length-1].focus(); }
+  });
+
+  $("edGuardar").addEventListener("click", function(){
+    var nombre = ed.nombre.trim().replace(/\s+/g," ");
+    if(!nombre){ alert("Escribí el nombre de la categoría."); return; }
+    var otra = datos.categorias.filter(function(c){ return c.id !== ed.catId && norm(c.nombre) === norm(nombre); })[0];
+    if(otra){ alert("Ya tenés una categoría llamada " + otra.nombre + "."); return; }
+
+    var vivas = ed.subs.filter(function(s){ return !s.borrar; });
+    var vistos = {};
+    for(var i = 0; i < vivas.length; i++){
+      var sn = vivas[i].nombre.trim().replace(/\s+/g," ");
+      if(!sn){ alert("Hay una subcategoría sin nombre. Escribile uno o eliminala."); return; }
+      if(vistos[norm(sn)]){ alert("Hay dos subcategorías llamadas " + sn + "."); return; }
+      vistos[norm(sn)] = true;
+      var cu = vivas[i].cuotas;
+      if(cu && (!(cu.monto > 0) || !/^\d{4}-\d{2}$/.test(cu.hasta || ""))){
+        alert("Completá el monto y el mes de la última cuota de " + sn + "."); return;
+      }
+      vivas[i].nombre = sn;
+    }
+
+    var catId = ed.catId;
+    if(catId){
+      var c = catDe(catId);
+      c.nombre = nombre; c.comp = ed.comp;
+    }else{
+      catId = "c-" + nid();
+      datos.categorias.push({id:catId, nombre:nombre, comp:ed.comp});
+      datos.plegados["cat-" + catId] = false;
+    }
+    var borrar = {};
+    ed.subs.forEach(function(s){ if(s.borrar){ borrar[s.id] = true; } });
+    datos.subs = datos.subs.filter(function(s){ return !borrar[s.id]; });
+    vivas.forEach(function(e2){
+      var s = subDe(e2.id);
+      if(!s){
+        s = nuevaSub(catId, e2.nombre, ed.comp);
+        s.id = e2.id;
+        datos.subs.push(s);
+      }
+      s.nombre = e2.nombre;
+      s.cuotas = e2.cuotas ? {monto:e2.cuotas.monto, hasta:e2.cuotas.hasta} : null;
+      if(s.cuotas){ s.arrastra = false; }
+    });
+    guardar(); pintar(); pintarPres(); cerrarTodo();
+  });
+
+  $("edEliminarCat").addEventListener("click", function(){
+    var c = catDe(ed.catId); if(!c) return;
+    var n = datos.subs.filter(function(s){ return s.catId === c.id; }).length;
+    var msg = "¿Eliminar la categoría " + c.nombre + " completa" +
+      (n ? ", con sus " + n + (n === 1 ? " subcategoría" : " subcategorías") : "") +
+      "? Los gastos ya registrados quedan en el historial.";
+    if(!confirm(msg)) return;
+    datos.categorias = datos.categorias.filter(function(x){ return x.id !== c.id; });
+    datos.subs = datos.subs.filter(function(s){ return s.catId !== c.id; });
+    guardar(); pintar(); pintarPres(); cerrarTodo();
+  });
 
   function aviso(texto, accion, etiqueta){
     var d = document.createElement("div");
@@ -857,6 +959,10 @@ var APP = (function(){
       var n = document.createElement("span");
       n.className = "pn"; n.textContent = c.nombre;
       cab.appendChild(n);
+      var edb = document.createElement("button");
+      edb.type = "button"; edb.className = "editar"; edb.textContent = "Editar";
+      edb.setAttribute("data-editar", c.id);
+      cab.appendChild(edb);
       var ph = c.comp === "fijo" ? "suma: " + Q(subs.reduce(function(t,s){ return t + esperado(s, presMes); }, 0))
              : (c.comp === "ahorro" ? "—" : "sin tope");
       var ic = campoMonto(c.id, ph);
@@ -885,7 +991,7 @@ var APP = (function(){
       if(!subs.length){
         var v = document.createElement("p");
         v.className = "nota"; v.style.margin = "4px 0";
-        v.textContent = "Sin subcategorías todavía. Se crean al registrar.";
+        v.textContent = "Sin subcategorías. Tocá Editar para agregar.";
         cont.appendChild(v);
       }
       bloque.appendChild(cont);
@@ -899,6 +1005,11 @@ var APP = (function(){
       }
       lista.appendChild(bloque);
     });
+    var nueva = document.createElement("button");
+    nueva.type = "button"; nueva.className = "agregarCat";
+    nueva.setAttribute("data-nuevacat", "1");
+    nueva.textContent = "+ Agregar nueva categoría";
+    lista.appendChild(nueva);
 
     var ing = datos.ingresos.reduce(function(t, i){ return i.fecha.slice(0,7) === presMes ? t + i.monto : t; }, 0);
     var txt = "Presupuestado " + Q(total);
@@ -906,6 +1017,11 @@ var APP = (function(){
     $("pResumen").textContent = txt;
   }
 
+  $("pLista").addEventListener("click", function(e){
+    if(e.target.closest("button[data-nuevacat]")){ abrirEdCat(null); return; }
+    var ed2 = e.target.closest("button[data-editar]");
+    if(ed2){ abrirEdCat(ed2.getAttribute("data-editar")); }
+  });
   $("pLista").addEventListener("change", function(e){
     var i = e.target;
     if(!i.getAttribute || !i.getAttribute("data-id")) return;
@@ -922,173 +1038,6 @@ var APP = (function(){
     if(hay && !confirm("Esto reemplaza los montos de " + nombreMes(presMes) + ". ¿Seguir?")) return;
     datos.presupuestos[presMes] = JSON.parse(JSON.stringify(orig));
     guardar(); pintarPres(); pintar();
-  });
-
-  /* ---------- hoja: categorías ---------- */
-  var cBorrador = null;
-
-  function pintarCategorias(){
-    var lista = $("cLista");
-    lista.innerHTML = "";
-    cBorrador.categorias.forEach(function(c){
-      var b = document.createElement("div");
-      b.className = "cCat";
-      var l1 = document.createElement("div");
-      l1.className = "pFila";
-      var n = document.createElement("input");
-      n.type = "text"; n.value = c.nombre;
-      n.setAttribute("aria-label", "Nombre de la categoría");
-      n.addEventListener("input", function(){ c.nombre = this.value; });
-      l1.appendChild(n);
-      var q = document.createElement("button");
-      q.type = "button"; q.className = "quitar"; q.textContent = "Quitar";
-      q.addEventListener("click", function(){
-        var cuantos = cBorrador.subs.filter(function(s){ return s.catId === c.id; }).length;
-        var msg = cuantos
-          ? "¿Quitar " + c.nombre + " y sus " + cuantos + " subcategorías? Sus gastos quedan en el historial."
-          : "¿Quitar " + c.nombre + "?";
-        if(!confirm(msg)) return;
-        cBorrador.categorias = cBorrador.categorias.filter(function(x){ return x.id !== c.id; });
-        cBorrador.subs = cBorrador.subs.filter(function(s){ return s.catId !== c.id; });
-        pintarCategorias();
-      });
-      l1.appendChild(q);
-      b.appendChild(l1);
-
-      var seg = document.createElement("div");
-      seg.className = "segm";
-      [["fijo","Fijo"],["variable","Variable"],["ahorro","Ahorro"]].forEach(function(o){
-        var x = document.createElement("button");
-        x.type = "button"; x.textContent = o[1];
-        x.setAttribute("aria-pressed", c.comp === o[0] ? "true" : "false");
-        x.addEventListener("click", function(){ c.comp = o[0]; pintarCategorias(); });
-        seg.appendChild(x);
-      });
-      b.appendChild(seg);
-
-      var hermanas = cBorrador.subs.filter(function(s){ return s.catId === c.id; });
-      hermanas.forEach(function(s){
-        var d = document.createElement("div");
-        d.className = "cSub";
-        var r1 = document.createElement("div");
-        r1.className = "l1";
-        var sn = document.createElement("input");
-        sn.type = "text"; sn.value = s.nombre;
-        sn.setAttribute("aria-label", "Nombre de la subcategoría");
-        sn.addEventListener("input", function(){ s.nombre = this.value; });
-        r1.appendChild(sn);
-        var sq = document.createElement("button");
-        sq.type = "button"; sq.className = "quitar"; sq.textContent = "Quitar";
-        sq.addEventListener("click", function(){
-          if(!confirm("¿Quitar " + s.nombre + "? Sus gastos quedan en el historial.")) return;
-          cBorrador.subs = cBorrador.subs.filter(function(x){ return x.id !== s.id; });
-          pintarCategorias();
-        });
-        r1.appendChild(sq);
-        d.appendChild(r1);
-
-        var r2 = document.createElement("div");
-        r2.className = "l2";
-        function casilla(texto, clave){
-          var lb = document.createElement("label");
-          var cb = document.createElement("input");
-          cb.type = "checkbox"; cb.checked = !!s[clave];
-          cb.addEventListener("change", function(){ s[clave] = this.checked; });
-          lb.appendChild(cb);
-          lb.appendChild(document.createTextNode(" " + texto));
-          return lb;
-        }
-        r2.appendChild(casilla("Arrastra saldo", "arrastra"));
-        r2.appendChild(casilla("Pide nota", "pideNota"));
-        var lc = document.createElement("label");
-        var cc = document.createElement("input");
-        cc.type = "checkbox"; cc.checked = !!s.cuotas;
-        cc.addEventListener("change", function(){
-          s.cuotas = this.checked ? {monto:0, hasta:""} : null;
-          pintarCategorias();
-        });
-        lc.appendChild(cc); lc.appendChild(document.createTextNode(" En cuotas"));
-        r2.appendChild(lc);
-        if(hermanas.length > 1){
-          var sel = document.createElement("select");
-          sel.setAttribute("aria-label", "Fusionar con otra subcategoría");
-          var o0 = document.createElement("option");
-          o0.value = ""; o0.textContent = "Fusionar con…";
-          sel.appendChild(o0);
-          hermanas.forEach(function(h){
-            if(h.id === s.id) return;
-            var o = document.createElement("option");
-            o.value = h.id; o.textContent = h.nombre;
-            sel.appendChild(o);
-          });
-          sel.value = s.fusionarCon || "";
-          sel.addEventListener("change", function(){ s.fusionarCon = this.value || null; });
-          r2.appendChild(sel);
-        }
-        d.appendChild(r2);
-
-        if(s.cuotas){
-          var cu = document.createElement("div");
-          cu.className = "cuo";
-          var im = document.createElement("input");
-          im.type = "number"; im.inputMode = "decimal"; im.placeholder = "Monto de cuota";
-          im.setAttribute("aria-label", "Monto de cada cuota");
-          if(s.cuotas.monto){ im.value = s.cuotas.monto; }
-          im.addEventListener("input", function(){ s.cuotas.monto = parseFloat(this.value) || 0; });
-          var ih = document.createElement("input");
-          ih.type = "month"; ih.value = s.cuotas.hasta || "";
-          ih.setAttribute("aria-label", "Mes de la última cuota");
-          ih.addEventListener("change", function(){ s.cuotas.hasta = this.value; });
-          cu.appendChild(im); cu.appendChild(ih);
-          d.appendChild(cu);
-        }
-        b.appendChild(d);
-      });
-      lista.appendChild(b);
-    });
-  }
-
-  $("btnCategorias").addEventListener("click", function(){
-    cBorrador = {
-      categorias: JSON.parse(JSON.stringify(datos.categorias)),
-      subs: JSON.parse(JSON.stringify(datos.subs))
-    };
-    pintarCategorias();
-    abrir("hojaCat");
-  });
-  $("cNueva").addEventListener("click", function(){
-    var nombre = prompt("Nombre de la nueva categoría");
-    if(!nombre || !nombre.trim()) return;
-    cBorrador.categorias.push({id:"c-" + nid(), nombre:nombre.trim(), comp:"variable"});
-    pintarCategorias();
-    $("cLista").lastElementChild.scrollIntoView({block:"center"});
-  });
-  $("cGuardar").addEventListener("click", function(){
-    var malos = cBorrador.categorias.filter(function(c){ return !c.nombre.trim(); });
-    if(malos.length){ alert("Hay una categoría sin nombre."); return; }
-    var sinNombre = cBorrador.subs.filter(function(s){ return !s.nombre.trim(); });
-    if(sinNombre.length){ alert("Hay una subcategoría sin nombre."); return; }
-    var cuotaMala = cBorrador.subs.filter(function(s){
-      return s.cuotas && (!(s.cuotas.monto > 0) || !/^\d{4}-\d{2}$/.test(s.cuotas.hasta || ""));
-    });
-    if(cuotaMala.length){ alert("Completá el monto y el mes final de las cuotas de " + cuotaMala[0].nombre + "."); return; }
-
-    /* fusiones: los gastos pasan a la subcategoría destino */
-    var quitar = {};
-    cBorrador.subs.forEach(function(s){
-      if(s.fusionarCon && s.fusionarCon !== s.id){
-        datos.movimientos.forEach(function(m){ if(m.subId === s.id){ m.subId = s.fusionarCon; } });
-        quitar[s.id] = true;
-      }
-      delete s.fusionarCon;
-    });
-    datos.categorias = cBorrador.categorias.map(function(c){ return {id:c.id, nombre:c.nombre.trim(), comp:c.comp}; });
-    datos.subs = cBorrador.subs.filter(function(s){ return !quitar[s.id]; }).map(function(s){
-      s.nombre = s.nombre.trim().replace(/\s+/g," ");
-      if(s.cuotas){ s.arrastra = false; }
-      return s;
-    });
-    guardar(); pintar(); cerrarTodo();
   });
 
   /* ---------- hoja: movimientos ---------- */

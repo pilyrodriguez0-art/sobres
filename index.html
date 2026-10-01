@@ -18,16 +18,17 @@
     --linea:#383026; --barra:#7E7160; --alerta:#D96C55; --acento:#C9A87C; --campo:#12100C;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0;height:100%}
   body{
     background:var(--bg); color:var(--tinta);
     font:400 17px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
-    min-height:100vh;
+    display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;
   }
+  #scroller{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   [hidden]{display:none !important}
   .cifra{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-variant-numeric:tabular-nums}
-  .vista{max-width:520px;margin:0 auto;padding:16px 18px calc(110px + env(safe-area-inset-bottom))}
+  .vista{max-width:520px;margin:0 auto;padding:16px 18px 48px}
 
   header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
   header h1{font:600 20px/1.2 inherit;margin:0;letter-spacing:-.01em}
@@ -97,7 +98,7 @@
 
   /* barra de pestañas */
   .tabs{
-    position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--sup);
+    flex:0 0 auto;position:relative;z-index:8;background:var(--sup);
     border-top:1px solid var(--linea);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
     padding-bottom:env(safe-area-inset-bottom);
   }
@@ -235,6 +236,17 @@
   .cSub .cuo{display:flex;gap:8px;margin-top:8px}
   .cSub .cuo input{flex:1}
   .cSub select{font-size:13px;padding:6px}
+  .catCab{display:flex;align-items:stretch;gap:8px}
+  .catCab .seccion{flex:1;min-width:0}
+  .editar{
+    flex:0 0 auto;align-self:center;background:none;border:1px solid var(--linea);border-radius:6px;
+    color:var(--suave);font:inherit;font-size:13px;padding:7px 11px;cursor:pointer;
+  }
+  .editar:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+  .pFila .editar{margin-left:auto}
+  .edSub{border-top:1px solid var(--linea);padding:12px 0}
+  .edSub .l1{display:flex;gap:8px;align-items:center}
+  .edSub .l1 input{flex:1;min-width:0}
   .filaAcc{display:flex;gap:18px;padding:10px 0 4px;border-top:1px dashed var(--linea)}
   .filaAcc button{background:none;border:0;color:var(--suave);font:inherit;font-size:14px;padding:4px 0;cursor:pointer;text-decoration:underline}
   .filaAcc button.peligro{color:var(--alerta)}
@@ -249,6 +261,7 @@
 </head>
 <body>
 
+<main id="scroller">
 <!-- ===== Sobres ===== -->
 <section class="vista" id="v-sobres">
   <header><h1>Sobres</h1><span class="mes" id="fechaHoy"></span></header>
@@ -281,6 +294,7 @@
   <div id="cIngresos"></div>
   <div id="cPagar"></div>
   <div id="cBalance"></div>
+  <div id="cMedios"></div>
   <div id="cProx"></div>
 </section>
 
@@ -319,7 +333,6 @@
     <button class="secundaria peligro" id="etQuitar">Quitar esta tarjeta</button>
   </div>
   <div id="pagosTar"></div>
-  <div id="porMedio"></div>
 </section>
 
 <!-- ===== Más ===== -->
@@ -327,12 +340,13 @@
   <header><h1>Más</h1></header>
   <div class="menu" style="margin-top:14px">
     <button type="button" id="btnHistorial">Movimientos<small>Historial completo de gastos</small></button>
-    <button type="button" id="btnCategorias">Categorías<small>Crear, renombrar, fusionar y quitar</small></button>
     <button type="button" id="btnCsv">Exportar CSV<small>Gastos e ingresos para Excel o Sheets</small></button>
     <button type="button" id="btnRespaldo">Respaldo<small>Copiar o restaurar todos los datos</small></button>
     <button type="button" id="btnCero" class="peligro">Empezar de cero<small>Borra gastos, ingresos, presupuestos y pagos</small></button>
   </div>
 </section>
+
+</main>
 
 <nav class="tabs" id="tabs" aria-label="Secciones">
   <button type="button" data-tab="sobres"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Sobres</button>
@@ -408,21 +422,6 @@
   </div>
 </section>
 
-<!-- ===== Hoja: nueva o editar categoría ===== -->
-<section class="hoja" id="hojaCatEd" role="dialog" aria-modal="true" aria-labelledby="tCatEd">
-  <h2 id="tCatEd">Nueva categoría</h2>
-  <label class="etiq" for="ceNombre">NOMBRE</label>
-  <input type="text" id="ceNombre" autocomplete="off" placeholder="Mascotas">
-  <span class="etiq">CÓMO SE COMPORTA</span>
-  <div class="segm" id="ceComp">
-    <button type="button" data-v="fijo">Fijo</button>
-    <button type="button" data-v="variable">Variable</button>
-    <button type="button" data-v="ahorro">Ahorro</button>
-  </div>
-  <p class="segunda" id="ceAyuda"></p>
-  <button class="principal" id="ceGuardar">Guardar</button>
-</section>
-
 <!-- ===== Hoja: movimientos ===== -->
 <section class="hoja" id="hojaHist" role="dialog" aria-modal="true" aria-labelledby="tHist">
   <h2 id="tHist">Movimientos</h2>
@@ -430,13 +429,23 @@
   <div id="movimientos"></div>
 </section>
 
-<!-- ===== Hoja: categorías ===== -->
-<section class="hoja" id="hojaCat" role="dialog" aria-modal="true" aria-labelledby="tCat">
-  <h2 id="tCat">Categorías</h2>
-  <p class="sub">Fijo: monto esperado cada mes. Variable: se registra y suma. Ahorro: se llena.</p>
-  <div id="cLista"></div>
-  <button class="txt" id="cNueva" style="margin-top:18px">+ Nueva categoría</button>
-  <button class="principal" id="cGuardar">Guardar cambios</button>
+<!-- ===== Hoja: editar categoría ===== -->
+<section class="hoja" id="hojaEdCat" role="dialog" aria-modal="true" aria-labelledby="tEdCat">
+  <h2 id="tEdCat">Editar</h2>
+  <label class="etiq" for="edNombre">NOMBRE DE LA CATEGORÍA</label>
+  <input type="text" id="edNombre" autocomplete="off" placeholder="Mascotas">
+  <span class="etiq">CÓMO SE COMPORTA</span>
+  <div class="segm" id="edComp">
+    <button type="button" data-v="fijo">Fijo</button>
+    <button type="button" data-v="variable">Variable</button>
+    <button type="button" data-v="ahorro">Ahorro</button>
+  </div>
+  <p class="segunda" id="edAyuda"></p>
+  <p class="subrotulo">SUBCATEGORÍAS</p>
+  <div id="edSubs"></div>
+  <button class="txt" id="edAgregarSub" style="margin-top:12px">+ Agregar subcategoría</button>
+  <button class="principal" id="edGuardar">Guardar</button>
+  <button class="secundaria peligro" id="edEliminarCat" style="margin-top:24px">Eliminar categoría completa</button>
 </section>
 
 <!-- ===== Hoja: respaldo ===== -->

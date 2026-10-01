@@ -246,6 +246,8 @@
     rotulo(cx, "PARA " + nProx.toUpperCase());
     bloque(cx, c2.total, "lo que deberías tener en tu cuenta el 1 de " + nProx.toLowerCase());
     c2.items.forEach(function(x){ lineaSimple(cx, x.nombre, x.detalle, x.monto); });
+
+    pintarPorMedio();
   }
   APP.alMostrar.caja = pintarCaja;
 
@@ -423,7 +425,7 @@
     APP.guardar();
     $("editorTar").hidden = true;
     pintarTarjetas();
-    window.scrollTo(0, 0);
+    $("scroller").scrollTop = 0;
   });
   $("etQuitar").addEventListener("click", function(){
     if(!confirm("¿Quitar " + (borrador.nombre || "esta tarjeta") + "? Los gastos registrados con ella se conservan.")) return;
@@ -539,8 +541,8 @@
   function pintarPagos(){
     var cont = $("pagosTar");
     cont.innerHTML = "";
-    var credito = (D().tarjetas || []).filter(function(t){ return t.tipo === "credito"; });
-    if(!credito.length) return;
+    var credito = (D().tarjetas || []).filter(listoParaCiclos);
+    if(!credito.length && !D().pagosTarjeta.length) return;
     var r = document.createElement("p");
     r.className = "subrotulo"; r.textContent = "PAGOS DE TARJETA DE CRÉDITO";
     cont.appendChild(r);
@@ -549,13 +551,6 @@
       h.style.cssText = "font-weight:600;margin:16px 0 4px;font-size:16px";
       h.textContent = t.nombre;
       cont.appendChild(h);
-      if(!listoParaCiclos(t)){
-        var s = document.createElement("p");
-        s.className = "segunda";
-        s.textContent = "Tocá la tarjeta arriba y poné su día de corte y de pago.";
-        cont.appendChild(s);
-        return;
-      }
       cortesDe(t).forEach(function(c){ cont.appendChild(filaCorte(t, c)); });
     });
     var hist = D().pagosTarjeta.slice().sort(function(a, b){ return a.fecha < b.fecha ? 1 : -1; });
@@ -571,7 +566,7 @@
   }
 
   function pintarPorMedio(){
-    var mes = mesDe(), cont = $("porMedio");
+    var mes = mesDe(), cont = $("cMedios");
     cont.innerHTML = "";
     var r = {};
     APP.medios().forEach(function(m){ r[m] = 0; });
@@ -586,13 +581,13 @@
     Object.keys(r).forEach(function(k){ total += r[k]; });
     var rot = document.createElement("p");
     rot.className = "subrotulo";
-    rot.textContent = "GASTADO EN " + soloMes(mes).toUpperCase() + " POR FORMA DE PAGO";
+    rot.textContent = "CON QUÉ PAGASTE EN " + soloMes(mes).toUpperCase();
     cont.appendChild(rot);
     Object.keys(r).forEach(function(k){
       lineaSimple(cont, k, total > 0 ? Math.round(r[k]/total*100) + "%" : "", r[k]);
     });
   }
 
-  function pintarTarjetas(){ pintarListaTar(); pintarPagos(); pintarPorMedio(); }
+  function pintarTarjetas(){ pintarListaTar(); pintarPagos(); }
   APP.alMostrar.tar = function(){ $("editorTar").hidden = true; pintarTarjetas(); };
 })();

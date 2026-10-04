@@ -287,7 +287,7 @@ var APP = (function(){
     if(b){ mostrarTab(b.getAttribute("data-tab")); }
   });
 
-  var HOJAS = ["hojaReg","hojaHist","hojaResp","hojaIng","hojaEdCat"];
+  var HOJAS = ["hojaReg","hojaHist","hojaResp","hojaIng","hojaEdCat","hojaPagoT"];
   function abrir(id){ $("fondo").classList.add("ver"); $(id).classList.add("ver"); $(id).scrollTop = 0; }
   function cerrarTodo(){
     $("fondo").classList.remove("ver");
@@ -448,6 +448,7 @@ var APP = (function(){
     nueva.setAttribute("data-nuevacat", "1");
     nueva.textContent = "+ Agregar nueva categoría";
     tab.appendChild(nueva);
+    if(typeof APP !== "undefined" && APP.seccionTarjetas){ APP.seccionTarjetas(tab); }
 
     $("totalGasto").textContent = Q(totalGas);
     var pie = ["llevás gastado este mes"];
@@ -1125,7 +1126,7 @@ var APP = (function(){
     if(!confirm("Se borran todos los gastos, ingresos, presupuestos y pagos de tarjeta. Se conservan tus categorías, subcategorías y tarjetas. ¿Seguir?")) return;
     if(!confirm("No se puede deshacer. Si querés, primero copiá el Respaldo. ¿Borrar ahora?")) return;
     datos.movimientos = []; datos.ingresos = []; datos.presupuestos = {};
-    datos.pagosTarjeta = []; datos.montosCorte = {}; datos.cortesPagados = {}; datos.saldos = {};
+    datos.pagosTarjeta = []; datos.montosCorte = {}; datos.cortesPagados = {}; datos.saldos = {}; datos.saldoHoy = null;
     datos.inicio = mesDe(); datos.visto = mesDe(); datos.inicioRegistro = aISO(new Date());
     guardar(); pintar();
     mostrarTab("sobres");

@@ -188,18 +188,31 @@
     var nMes = soloMes(mes), nProx = soloMes(prox);
     $("sCaja").textContent = nombreMes(mes);
 
-    /* saldo con que arrancó el mes */
+    /* saldo con que arrancó el mes, calculado desde el saldo de hoy */
     var cs = $("cSaldo"); cs.innerHTML = "";
     var saldo = typeof D().saldos[mes] === "number" ? D().saldos[mes] : null;
-    rotulo(cs, "SALDO AL 1 DE " + nMes.toUpperCase());
+    var ref = D().saldoHoy && D().saldoHoy.mes === mes ? D().saldoHoy : null;
+    rotulo(cs, "SALDO EN EL BANCO");
     var bs = document.createElement("div");
     bs.className = "bloque";
-    bs.innerHTML = '<div class="saldoCampo"><span>Q</span><input type="number" id="inSaldo" inputmode="decimal" step="0.01" placeholder="0" aria-label="Saldo en el banco al 1 del mes"></div>' +
-                   '<div class="pe">lo que tenías en tu cuenta del banco ese día · no es un ingreso</div>';
-    if(saldo !== null){ bs.querySelector("input").value = saldo; }
-    bs.querySelector("input").addEventListener("change", function(){
+    bs.innerHTML = '<label class="etiq" for="inSaldoHoy" style="margin-top:0">¿CUÁNTO TENÉS HOY EN EL BANCO?</label>' +
+      '<div class="saldoCampo" style="margin-top:4px"><span>Q</span><input type="number" id="inSaldoHoy" inputmode="decimal" step="0.01" placeholder="0"></div>' +
+      '<div class="pe" id="peSaldo"></div>';
+    var inp = bs.querySelector("input");
+    if(ref){ inp.value = ref.monto; }
+    bs.querySelector("#peSaldo").textContent = saldo !== null
+      ? "Saldo al 1 de " + nMes.toLowerCase() + ": " + Q(saldo) +
+        (ref ? " · calculado con tus " + Q(ref.monto) + " del " + APP.diaCorto(ref.fecha) : "")
+      : "Escribí lo que ves hoy en la app del banco y calculo con cuánto empezaste el mes.";
+    inp.addEventListener("change", function(){
       var v = parseFloat(this.value);
-      if(isNaN(v)){ delete D().saldos[mes]; } else { D().saldos[mes] = v; }
+      if(isNaN(v)){
+        delete D().saldos[mes]; D().saldoHoy = null;
+      }else{
+        /* lo de hoy + lo que ya salió − lo que ya entró = lo que había el día 1 */
+        D().saldos[mes] = Math.round((v + salidoMes(mes) - ingresoMes(mes)) * 100) / 100;
+        D().saldoHoy = {mes:mes, monto:v, fecha:new Date().toISOString()};
+      }
       APP.guardar(); pintarCaja();
     });
     cs.appendChild(bs);
@@ -606,5 +619,127 @@
   }
 
   function pintarTarjetas(){ pintarListaTar(); pintarPagos(); }
+
+  /* Corte que toca pagar ahora: el último cerrado sin pagar; si no hay, el último cerrado. */
+  function cortePendiente(t){
+    if(!listoParaCiclos(t)) return null;
+    var hoy = new Date();
+    var c = fechaCorte(t, hoy);
+    if(c > hoy){ c = cortePrevio(t, c); }
+    /* si el corte anterior quedó sin pagar y es del período de registro, ese va primero */
+    var ant = cortePrevio(t, c);
+    if(fechaPago(t, ant) >= inicioRegistro() && !estaPagado(claveCorte(t, ant)) && montoCorte(t, ant) > 0){
+      return ant;
+    }
+    return c;
+  }
+  function ultimoPago(t){
+    return D().pagosTarjeta.filter(function(p){ return p.tarjetaId === t.id; })
+      .sort(function(a, b){ return a.fecha < b.fecha ? 1 : -1; })[0] || null;
+  }
+
+  APP.seccionTarjetas = function(tab){
+    var credito = (D().tarjetas || []).filter(function(t){ return t.tipo === "credito" && t.nombre; });
+    if(!credito.length) return;
+    var cab = document.createElement("div");
+    cab.className = "seccionT";
+    cab.innerHTML = '<h3>Pagos de tarjeta</h3><div class="pe">Lo que debés de cada tarjeta. No se suma como gasto: las compras ya están en sus sobres.</div>';
+    tab.appendChild(cab);
+    var cont = document.createElement("div");
+    cont.className = "contenido";
+    credito.forEach(function(t){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "fila filaT";
+      b.innerHTML = '<span class="top"><span class="nom"><span class="punto"></span><span class="nt"></span></span><span class="cifra val"></span></span><span class="nota"></span>';
+      b.querySelector(".punto").style.background = APP.colorFondo(t.color);
+      b.querySelector(".nt").textContent = t.nombre;
+      var val = b.querySelector(".val"), nota = b.querySelector(".nota");
+      var c = cortePendiente(t);
+      if(c){
+        var cl = claveCorte(t, c), pago = pagoDe(cl), monto = montoCorte(t, c), vence = fechaPago(t, c);
+        if(pago){
+          b.className += " pagado";
+          val.textContent = Q(pago.monto);
+          var abierto = gastoCiclo(t, fechaCorte(t, new Date()));
+          nota.textContent = "Pagado el " + diaMes(new Date(pago.fecha)) +
+            (abierto > 0 ? " · llevás " + Q(abierto) + " para el próximo corte" : "");
+        }else{
+          val.textContent = Q(monto);
+          var inc = !completo(t, c) && typeof D().montosCorte[cl] !== "number";
+          nota.textContent = (monto > 0 ? "Debés · vence el " : "Vence el ") + diaLargo(vence) +
+            (inc ? " · monto incompleto, tocá para poner el del estado de cuenta" : "");
+          if(diasHasta(vence) < 0 && monto > 0){ b.className += " pasado"; nota.textContent = "Venció el " + diaLargo(vence) + " · tocá para registrar el pago"; }
+        }
+      }else{
+        var up = ultimoPago(t);
+        val.textContent = up ? Q(up.monto) : "—";
+        nota.textContent = up ? "Último pago el " + diaMes(new Date(up.fecha)) + " · tocá para registrar otro"
+                              : "Tocá para registrar un pago";
+      }
+      b.addEventListener("click", function(){ abrirPagoT(t); });
+      cont.appendChild(b);
+    });
+    tab.appendChild(cont);
+  };
+
+  var tarjetaPago = null, cortePago = null;
+  function abrirPagoT(t){
+    tarjetaPago = t;
+    cortePago = cortePendiente(t);
+    $("tPagoT").textContent = t.nombre;
+    var prev = $("ptPrev"); prev.innerHTML = "";
+    prev.appendChild(APP.tarjetaNodo(t, false));
+    var info = "";
+    if(cortePago){
+      var cl = claveCorte(t, cortePago), calc = gastoCiclo(t, cortePago);
+      info = "Corte del " + diaLargo(cortePago) + " · vence el " + diaLargo(fechaPago(t, cortePago)) + ". ";
+      info += completo(t, cortePago)
+        ? "Según tus registros: " + Q(calc) + "."
+        : "Todavía no tenés todas las compras de ese corte en la app: escribí el monto de tu estado de cuenta.";
+      var m = typeof D().montosCorte[cl] === "number" ? D().montosCorte[cl] : (completo(t, cortePago) ? calc : 0);
+      $("ptMonto").value = m > 0 ? Math.round(m * 100) / 100 : "";
+    }else{
+      info = "Escribí el monto que pagaste. Si ponés el día de corte y de pago de esta tarjeta en la pestaña Tarjetas, después se calcula solo.";
+      $("ptMonto").value = "";
+    }
+    $("ptInfo").textContent = info;
+    $("ptFecha").value = hoyISO();
+    pintarHistPagoT();
+    APP.abrir("hojaPagoT");
+  }
+  function pintarHistPagoT(){
+    var l = $("ptLista"); l.innerHTML = "";
+    var regs = D().pagosTarjeta.filter(function(p){ return p.tarjetaId === tarjetaPago.id; })
+      .sort(function(a, b){ return a.fecha < b.fecha ? 1 : -1; });
+    $("ptRotulo").hidden = !regs.length;
+    regs.forEach(function(p){
+      var d = document.createElement("div");
+      d.className = "mov";
+      d.innerHTML = '<span><span class="nm"></span></span><span class="der"><span class="cifra mt"></span><button class="quitar" type="button">Borrar</button></span>';
+      d.querySelector(".nm").textContent = "Pagado el " + APP.diaCorto(p.fecha);
+      d.querySelector(".mt").textContent = Q(p.monto);
+      d.querySelector(".quitar").addEventListener("click", function(){
+        if(!confirm("¿Borrar este pago?")) return;
+        D().pagosTarjeta = D().pagosTarjeta.filter(function(x){ return x.id !== p.id; });
+        APP.guardar(); pintarHistPagoT(); APP.pintar();
+      });
+      l.appendChild(d);
+    });
+  }
+  $("ptGuardar").addEventListener("click", function(){
+    var m = parseFloat($("ptMonto").value), f = $("ptFecha").value;
+    if(!(m > 0)){ alert("Escribí el monto que pagaste."); return; }
+    if(!f){ alert("Elegí la fecha del pago."); return; }
+    var t = tarjetaPago, cl;
+    if(cortePago && !estaPagado(claveCorte(t, cortePago))){
+      cl = claveCorte(t, cortePago);
+      if(!completo(t, cortePago)){ D().montosCorte[cl] = m; }
+    }else{
+      cl = t.id + "|manual|" + nid();
+    }
+    D().pagosTarjeta.push({id:nid(), tarjetaId:t.id, tarjeta:t.nombre, clave:cl, monto:m,
+                           fecha:new Date(f + "T12:00:00").toISOString()});
+    APP.guardar(); APP.pintar(); APP.cerrarTodo();
+  });
   APP.alMostrar.tar = function(){ $("editorTar").hidden = true; pintarTarjetas(); };
 })();

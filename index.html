@@ -256,6 +256,11 @@
     color:var(--suave);font:inherit;font-size:16px;cursor:pointer;
   }
   .ingFila .val{font-size:22px}
+  .seccionT{border-top:1.5px solid var(--tinta);padding:16px 0 6px}
+  .seccionT h3{margin:0;font-family:inherit;font-weight:600;font-size:19px}
+  .seccionT .pe{font-size:14px;color:var(--suave);margin-top:4px}
+  .filaT .nom{display:flex;align-items:center;gap:8px}
+  .filaT .punto{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
   .saldoCampo{display:flex;align-items:center;gap:10px;margin-top:10px}
   .saldoCampo span{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:28px}
   .saldoCampo input{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:26px;padding:8px 10px}
@@ -424,6 +429,20 @@
     <button type="button" id="iRenombrar">Cambiar nombre</button>
     <button type="button" id="iEliminar" class="peligro">Eliminar fuente</button>
   </div>
+</section>
+
+<!-- ===== Hoja: pago de tarjeta ===== -->
+<section class="hoja" id="hojaPagoT" role="dialog" aria-modal="true" aria-labelledby="tPagoT">
+  <h2 id="tPagoT">Pago de tarjeta</h2>
+  <div id="ptPrev" style="max-width:260px;margin:0 auto 6px"></div>
+  <p class="segunda" id="ptInfo"></p>
+  <label class="etiq" for="ptMonto">MONTO QUE PAGASTE</label>
+  <input type="number" id="ptMonto" inputmode="decimal" min="0" step="0.01" placeholder="Q0">
+  <label class="etiq" for="ptFecha">FECHA DEL PAGO</label>
+  <input type="date" id="ptFecha">
+  <button class="principal" id="ptGuardar">Registrar pago</button>
+  <p class="subrotulo" id="ptRotulo">PAGOS ANTERIORES</p>
+  <div id="ptLista"></div>
 </section>
 
 <!-- ===== Hoja: movimientos ===== -->

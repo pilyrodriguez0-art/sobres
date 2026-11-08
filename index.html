@@ -29,24 +29,28 @@
   [hidden]{display:none !important}
   .cifra{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-variant-numeric:tabular-nums}
   .vista{max-width:520px;margin:0 auto;padding:16px 18px 48px}
+  .alerta{color:var(--alerta)}
 
   header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
   header h1{font-family:inherit;font-weight:700;font-size:2em;line-height:1.1;margin:0;letter-spacing:-.01em}
   .mes{font-size:14px;color:var(--suave)}
-  .resumen{
-    border-top:1.5px solid var(--tinta);margin-top:10px;padding-top:14px;
-    display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
-  }
+  .resumen{border-top:1.5px solid var(--tinta);margin-top:10px;padding-top:14px}
   .resumen .grande{font-size:44px;line-height:1;letter-spacing:-.02em}
-  .resumen .pie{font-size:14px;color:var(--suave);text-align:right;max-width:48%}
-  .segunda{font-size:14px;color:var(--suave);margin-top:6px}
+  .pieTotal{font-size:14px;color:var(--suave);margin-top:6px}
+  .pieTotal div{margin-top:2px}
+  .pieTotal .tinta{color:var(--tinta);margin-top:6px}
+  .segunda{font-size:14px;color:var(--suave);margin-top:8px}
 
   .banner{
-    border:1px solid var(--linea);background:var(--sup);padding:12px 14px;margin-top:18px;
-    font-size:14px;color:var(--suave);display:flex;gap:12px;align-items:flex-start;
+    border:1px solid var(--alerta);background:var(--sup);padding:12px 14px;margin-top:18px;border-radius:6px;
+    font-size:15px;display:flex;gap:12px;align-items:center;justify-content:space-between;
   }
-  .banner button{background:none;border:0;color:var(--acento);font:inherit;font-size:14px;padding:0;cursor:pointer;text-decoration:underline}
-  .banner .cerrar{margin-left:auto;color:var(--suave);text-decoration:none;font-size:18px;line-height:1}
+  .banner button{background:var(--acento);color:var(--sup);border:0;border-radius:6px;font:inherit;font-size:14px;font-weight:600;padding:9px 12px;cursor:pointer;white-space:nowrap}
+
+  .vacio{text-align:center;padding:36px 0 10px}
+  .vacio p{color:var(--suave);font-size:15px;margin:0 0 16px}
+  .vacio .chico{font-size:13px;margin:10px 0 0}
+  .botonMas{width:72px;height:72px;border-radius:50%;border:0;background:var(--acento);color:var(--sup);font-size:38px;line-height:1;cursor:pointer}
 
   .fila{
     display:block;width:100%;text-align:left;background:none;color:inherit;font:inherit;
@@ -55,49 +59,55 @@
   .fila:focus-visible{outline:2px solid var(--acento);outline-offset:3px}
   .top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
   .nom{font-size:16px}
-  .val{font-size:25px;line-height:1;letter-spacing:-.01em}
-  .barra{height:4px;background:var(--linea);margin-top:10px;position:relative;overflow:hidden}
-  .barra i{position:absolute;inset:0 auto 0 0;background:var(--barra);display:block}
-  .nota{font-size:13px;color:var(--suave);margin-top:7px}
+  .val{font-size:25px;line-height:1;letter-spacing:-.01em;white-space:nowrap}
+  .nota{font-size:13px;color:var(--suave);margin-top:6px}
   .pasado .val,.pasado .nota{color:var(--alerta)}
-  .pasado .barra i{background:var(--alerta)}
   .pagado .val,.pagado .nom{opacity:.5}
-  .seccion{border-top:1.5px solid var(--tinta);padding:16px 0 14px;cursor:pointer}
+  .seccion{border-top:1.5px solid var(--tinta);padding:16px 0 14px;cursor:pointer;margin-top:4px}
   .seccion .izq{display:flex;align-items:baseline;gap:12px;min-width:0}
-  .seccion .tog{background:none;border:0;padding:0;color:var(--tinta);font-family:inherit;font-weight:600;font-size:19px;line-height:1.3;cursor:pointer;text-align:left}
+  .seccion .tog{color:var(--tinta);font-weight:600;font-size:19px;line-height:1.3}
   .seccion .val{font-size:22px}
   .seccion.pasado .tog{color:var(--alerta)}
-  .seccion .tog:focus-visible,.editar:focus-visible{outline:2px solid var(--acento);outline-offset:3px}
   .contenido{padding-left:14px}
   .contenido .fila{padding:11px 0 9px}
-  .contenido .nom{font-size:15px;color:var(--suave)}
+  .contenido .nom{font-size:15px}
   .contenido .val{font-size:19px}
-  .chev{font-size:13px;color:var(--suave);margin-left:6px}
+  .chev{font-size:12px;color:var(--suave);margin-left:6px}
   .agregar{
     display:block;width:100%;text-align:left;background:none;border:0;border-top:1px dashed var(--linea);
     color:var(--suave);font:inherit;font-size:14px;padding:11px 0;cursor:pointer;
   }
-
-  button.txt{
-    background:none;border:1px solid var(--linea);color:var(--suave);
-    font:inherit;font-size:14px;padding:9px 14px;border-radius:2px;cursor:pointer;
+  .agregarCat{
+    display:block;width:100%;text-align:left;margin-top:16px;padding:16px 0;
+    background:none;border:0;border-top:1.5px dashed var(--suave);border-bottom:1.5px dashed var(--suave);
+    color:var(--suave);font:inherit;font-size:16px;cursor:pointer;
   }
-  button.txt:active{background:var(--sup)}
-  button.txt:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+  .editar{
+    flex:0 0 auto;background:none;border:0;padding:2px 0;
+    color:var(--acento);font-family:inherit;font-size:13px;font-weight:400;cursor:pointer;
+  }
+  .enlace{background:none;border:0;padding:0;color:var(--acento);font:inherit;text-decoration:underline;cursor:pointer}
+  .seccionT{border-top:1.5px solid var(--tinta);padding:16px 0 6px;margin-top:4px}
+  .seccionT h3{margin:0;font-family:inherit;font-weight:600;font-size:19px}
+  .seccionT .pe{font-size:13px;color:var(--suave);margin-top:4px}
+  .filaT .nom{display:flex;align-items:center;gap:8px}
+  .punto{display:inline-block;width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+
   .principal{
-    display:block;width:100%;margin-top:14px;padding:16px;border:0;border-radius:6px;
+    display:block;width:100%;margin-top:16px;padding:16px;border:0;border-radius:6px;
     background:var(--acento);color:var(--sup);font-family:inherit;font-weight:600;font-size:17px;line-height:1;cursor:pointer;
   }
   .principal[disabled]{opacity:.35}
   .secundaria{display:block;width:100%;margin-top:8px;padding:12px;border:0;background:none;color:var(--suave);font:inherit;font-size:15px;cursor:pointer}
   .peligro{color:var(--alerta)}
+  button.txt{background:none;border:1px solid var(--linea);color:var(--suave);font:inherit;font-size:14px;padding:9px 14px;border-radius:6px;cursor:pointer}
 
-  input[type=text],input[type=number],input[type=date],input[type=month],textarea,select{
+  input[type=text],input[type=number],input[type=date],select{
     font:inherit;font-size:16px;padding:10px;border:1px solid var(--linea);
-    border-radius:4px;background:var(--campo);color:var(--tinta);width:100%;
+    border-radius:6px;background:var(--campo);color:var(--tinta);width:100%;
   }
-  input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--acento);outline-offset:-1px}
-  input[type=checkbox]{width:auto}
+  input:focus-visible,select:focus-visible{outline:2px solid var(--acento);outline-offset:-1px}
+  input[type=checkbox]{width:20px;height:20px;accent-color:var(--acento)}
 
   /* barra de pestañas */
   .tabs{
@@ -111,46 +121,41 @@
   }
   .tabs button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
   .tabs button[aria-current="page"]{color:var(--tinta);font-weight:600}
-  .tabs button:focus-visible{outline:2px solid var(--acento);outline-offset:-2px}
 
   /* hojas */
   .fondo{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
   .fondo.ver{opacity:1;pointer-events:auto}
   .hoja{
     position:fixed;left:0;right:0;bottom:0;background:var(--sup);
-    border-radius:14px 14px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+    border-radius:14px 14px 0 0;padding:20px 18px calc(28px + env(safe-area-inset-bottom));
     transform:translateY(101%);transition:transform .28s cubic-bezier(.32,.72,0,1);
     max-height:94vh;overflow-y:auto;z-index:10;
   }
   .hoja.ver{transform:translateY(0)}
-  .hoja h2{font-family:inherit;font-weight:600;font-size:18px;line-height:1.3;margin:0 0 4px}
-  .hoja .sub{color:var(--suave);font-size:14px;margin:0 0 16px}
+  .hoja > *{max-width:520px;margin-left:auto;margin-right:auto}
   .barraHoja{
-    position:sticky;top:0;z-index:3;background:var(--sup);
+    position:sticky;top:-20px;z-index:3;background:var(--sup);
     display:flex;align-items:center;gap:12px;
     margin:-20px -18px 16px;padding:14px 18px 12px;border-bottom:1px solid var(--linea);
   }
-  .barraHoja h2{margin:0;flex:1;min-width:0;font-size:17px}
-  .barraHoja .atras{background:none;border:0;color:var(--tinta);font:inherit;font-size:22px;line-height:1;padding:4px 8px 4px 0;cursor:pointer}
-  .barraHoja .guarda{background:var(--acento);color:var(--sup);border:0;border-radius:6px;font-family:inherit;font-weight:600;font-size:14px;line-height:1;padding:10px 14px;cursor:pointer;white-space:nowrap}
+  .hoja > .barraHoja{max-width:none}
+  .barraHoja h2{margin:0;flex:1;min-width:0;font-family:inherit;font-weight:600;font-size:17px;line-height:1.3}
+  .atras{background:none;border:0;color:var(--tinta);font:inherit;font-size:24px;line-height:1;padding:4px 10px 4px 0;cursor:pointer}
 
-  /* registrar */
-  .etiq{display:block;font-size:12px;color:var(--suave);margin:16px 0 6px;letter-spacing:.02em}
+  .etiq{display:block;font-size:12px;color:var(--suave);margin:18px 0 7px;letter-spacing:.03em}
   .chips{display:flex;flex-wrap:wrap;gap:7px}
   .chips button{
     font:inherit;font-size:14px;padding:9px 12px;cursor:pointer;
     background:none;border:1px solid var(--linea);border-radius:6px;color:var(--suave);
   }
   .chips button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:var(--bg)}
-  .chips button.nueva{border-style:dashed}
-  .chips button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
-  .formNueva{border:1px solid var(--linea);border-radius:8px;padding:12px;margin-top:10px;background:var(--bg)}
-  .aviso{font-size:13px;color:var(--alerta);margin:8px 0 0}
-  .check{display:flex;gap:8px;align-items:center;font-size:15px;margin-top:12px;cursor:pointer}
+  .chips button.nueva{border-style:dashed;border-color:var(--suave)}
+  .aviso{font-size:14px;color:var(--alerta);margin:10px 0 0}
+  .check{display:flex;gap:10px;align-items:center;font-size:15px;margin-top:14px;cursor:pointer}
   .monto{font-size:52px;line-height:1;text-align:center;padding:14px 0;letter-spacing:-.02em}
   .teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .teclado button{
-    font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:26px;padding:14px 0;
+    font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:26px;padding:13px 0;
     background:var(--bg);border:1px solid var(--linea);border-radius:6px;color:var(--tinta);cursor:pointer;
   }
   .teclado button:active{background:var(--linea)}
@@ -160,6 +165,8 @@
   }
   .lineaFecha .cambia{float:right;color:var(--suave);font-size:13px}
   .recuerdo{font-size:13px;color:var(--suave);margin:8px 0 0}
+  .lineaNueva{display:flex;gap:8px;margin-top:10px}
+  .lineaNueva input{flex:1;min-width:0}
 
   /* tarjetas visuales */
   .tarjeta{border-radius:12px;aspect-ratio:1.586;padding:14px 16px;position:relative;text-align:left}
@@ -173,97 +180,91 @@
   .tarjeta.chica .tRed{font-size:11px;right:10px;bottom:6px}
   .tarjeta.chica .tTipo{font-size:10px;left:10px;bottom:7px}
   .rejillaT{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  .elige{display:block;width:100%;padding:0;border:0;background:none;border-radius:10px;cursor:pointer}
+  .elige{display:block;width:100%;padding:0;border:0;background:none;border-radius:10px;cursor:pointer;color:inherit;font:inherit}
   .elige[aria-pressed="true"]{outline:3px solid var(--tinta);outline-offset:2px}
-  .elige:focus-visible{outline:3px solid var(--acento);outline-offset:2px}
-  .filaBase,.segm{display:flex;gap:7px}
-  .filaBase{margin-top:10px}
-  .filaBase button,.segm button{
+  .tarMas{border:1.5px dashed var(--suave);border-radius:12px;aspect-ratio:1.586;background:none;color:var(--suave);font-size:34px;cursor:pointer}
+  .segm{display:flex;gap:7px}
+  .segm button{
     flex:1 1 0;font:inherit;font-size:14px;padding:11px 6px;cursor:pointer;
     background:none;border:1px solid var(--linea);border-radius:6px;color:var(--suave);
   }
-  .filaBase button[aria-pressed="true"],.segm button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:var(--bg)}
-  .paleta{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px}
-  .paleta button{aspect-ratio:1;border:0;border-radius:4px;padding:0;cursor:pointer}
-  .paleta button[aria-pressed="true"]{outline:2px solid var(--tinta);outline-offset:2px}
-  .editor{border-top:1.5px solid var(--tinta);margin-top:20px;padding-top:16px}
-  .editor .prev{max-width:300px;margin:0 auto 6px}
+  .segm button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:var(--bg)}
+  .paleta{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+  .paleta button{aspect-ratio:1;border:0;border-radius:50%;padding:0;cursor:pointer}
+  .paleta button[aria-pressed="true"]{outline:2px solid var(--tinta);outline-offset:3px}
+  .prev{max-width:280px;margin:0 auto 6px}
   .dias{display:flex;gap:12px}
-  .dias > div{flex:1}
-  .dias input{text-align:center}
-  .explica{font-size:14px;color:var(--tinta);background:var(--sup);border-radius:6px;padding:10px 12px;margin:12px 0 0}
+  .dias > div{flex:1;min-width:0}
+  .explica{font-size:14px;color:var(--tinta);background:var(--bg);border-radius:6px;padding:11px 12px;margin:14px 0 0}
 
-  /* listas y bloques */
-  .subrotulo{font-size:12px;color:var(--suave);margin:26px 0 0;letter-spacing:.02em}
-  .linea{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:11px 0;border-top:1px solid var(--linea)}
-  .linea .et{font-size:14px}
-  .linea .et small{color:var(--suave);font-size:12px}
-  .linea .ci{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-variant-numeric:tabular-nums;font-size:16px}
+  /* bloques y listas */
+  .subrotulo{font-size:12px;color:var(--suave);margin:26px 0 0;letter-spacing:.03em}
   .bloque{border-top:1.5px solid var(--tinta);margin-top:6px;padding-top:12px}
-  .bloque .ng{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:32px;line-height:1}
-  .bloque .pe{font-size:12px;color:var(--suave);margin-top:6px}
-  .corte{border-top:1px solid var(--linea);padding:13px 0 12px}
-  .corte .cab{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
-  .corte .cab b{font-weight:600;font-size:15px}
-  .corte .ci{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:18px}
-  .corte p{margin:5px 0 0;font-size:13px;color:var(--suave)}
-  .corte .manual{display:flex;gap:8px;align-items:center;margin-top:8px}
-  .cfgT{display:flex;gap:8px;align-items:center;padding:11px 0;border-top:1px solid var(--linea)}
-  .cfgT input[type=text]{flex:1;min-width:0}
-  .quitar{background:none;border:0;color:var(--alerta);font:inherit;font-size:14px;padding:6px;cursor:pointer}
-  .mov{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:11px 0;border-top:1px solid var(--linea)}
-  .mov small{display:block;color:var(--suave);font-size:13px}
-  .mov .der{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
+  .bloque .ng{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:34px;line-height:1}
+  .bloque .deLim{font-size:15px;color:var(--suave)}
+  .pe{font-size:13px;color:var(--suave);margin-top:6px}
+  .limBar{height:6px;background:var(--linea);border-radius:3px;margin-top:10px;overflow:hidden}
+  .limBar i{display:block;height:100%;background:var(--acento);border-radius:3px}
+  .limBar.pasado i{background:var(--alerta)}
+  .linea{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:11px 0;border-top:1px solid var(--linea);
+    width:100%;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;text-align:left}
+  button.linea{cursor:pointer}
+  .linea .et{font-size:15px;min-width:0}
+  .linea .et small{display:block;color:var(--suave);font-size:12px;margin-top:2px}
+  .linea .ci{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-variant-numeric:tabular-nums;font-size:17px;white-space:nowrap}
+  .saldoCampo{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .saldoCampo span{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:28px}
+  .saldoCampo input{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:26px;padding:8px 10px}
+  .filaAcc{display:flex;gap:20px;padding:12px 0 4px;margin-top:18px;border-top:1px dashed var(--linea)}
+  .filaAcc button{background:none;border:0;color:var(--suave);font:inherit;font-size:14px;padding:4px 0;cursor:pointer;text-decoration:underline}
+  .filaAcc button.peligro{color:var(--alerta)}
 
-  /* presupuesto */
-  .selMes{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--linea);border-radius:6px;margin-top:14px}
-  .selMes button{background:none;border:0;color:var(--tinta);font-size:22px;padding:8px 16px;cursor:pointer}
-  .selMes span{font-size:16px}
-  .pCat{border-top:1.5px solid var(--tinta);margin-top:14px;padding-top:12px}
-  .pFila{display:flex;align-items:center;gap:10px;padding:8px 0}
-  .pFila .pn{flex:1;min-width:0;font-size:15px}
-  .pFila input{width:120px;text-align:right}
-  .pCat > .pFila .pn{font-weight:600;font-size:16px}
-  .pSubs{padding-left:14px;border-left:1px solid var(--linea);margin-left:2px}
-  .pSubs .pn{color:var(--suave)}
-
-  /* más y categorías */
-  .menu button{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--linea);color:var(--tinta);font:inherit;font-size:16px;padding:15px 0;cursor:pointer}
-  .menu button small{display:block;font-size:13px;color:var(--suave);margin-top:2px}
-  .cCat{border-top:1.5px solid var(--tinta);margin-top:18px;padding-top:12px}
-  .cSub{border-top:1px solid var(--linea);padding:10px 0 10px 12px}
-  .cSub .l1{display:flex;gap:8px;align-items:center}
-  .cSub .l1 input{flex:1;min-width:0}
-  .cSub .l2{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-size:13px;color:var(--suave)}
-  .cSub label{display:flex;gap:6px;align-items:center;cursor:pointer}
-  .cSub .cuo{display:flex;gap:8px;margin-top:8px}
-  .cSub .cuo input{flex:1}
-  .cSub select{font-size:13px;padding:6px}
-  .editar{
-    flex:0 0 auto;background:none;border:0;padding:2px 0;
-    color:var(--acento);font-family:inherit;font-size:13px;font-weight:400;cursor:pointer;
-  }
-  .pFila .editar{margin-left:auto}
+  /* editar categoría */
   .edSub{border-top:1px solid var(--linea);padding:12px 0}
   .edSub .l1{display:flex;gap:8px;align-items:center}
   .edSub .l1 input{flex:1;min-width:0}
-  .filaAcc{display:flex;gap:18px;padding:10px 0 4px;border-top:1px dashed var(--linea)}
-  .filaAcc button{background:none;border:0;color:var(--suave);font:inherit;font-size:14px;padding:4px 0;cursor:pointer;text-decoration:underline}
-  .filaAcc button.peligro{color:var(--alerta)}
-  .agregarCat{
-    display:block;width:100%;text-align:left;margin-top:14px;padding:16px 0;
-    background:none;border:0;border-top:1.5px dashed var(--suave);border-bottom:1.5px dashed var(--suave);
-    color:var(--suave);font:inherit;font-size:16px;cursor:pointer;
-  }
-  .ingFila .val{font-size:22px}
-  .seccionT{border-top:1.5px solid var(--tinta);padding:16px 0 6px}
-  .seccionT h3{margin:0;font-family:inherit;font-weight:600;font-size:19px}
-  .seccionT .pe{font-size:14px;color:var(--suave);margin-top:4px}
-  .filaT .nom{display:flex;align-items:center;gap:8px}
-  .filaT .punto{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
-  .saldoCampo{display:flex;align-items:center;gap:10px;margin-top:10px}
-  .saldoCampo span{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:28px}
-  .saldoCampo input{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:26px;padding:8px 10px}
+  .quitar{background:none;border:0;color:var(--alerta);font:inherit;font-size:14px;padding:6px;cursor:pointer}
+  .metaFila{display:flex;gap:10px;align-items:center;margin-top:10px}
+  .metaFila .check{margin-top:0;flex:1}
+  .metaFila input[type=number]{width:130px}
+
+  /* presupuesto */
+  .selMes{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--linea);border-radius:6px;margin-top:14px}
+  .selMes button{background:none;border:0;color:var(--tinta);font-size:24px;padding:6px 18px;cursor:pointer}
+  .selMes span{font-size:16px}
+  .pTotal{display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px solid var(--tinta);margin-top:16px;padding-top:12px}
+  .pTotal b{font-size:17px}
+  .pTotal .cifra{font-size:24px}
+  .pCat{border-top:1.5px solid var(--tinta);margin-top:16px;padding-top:12px}
+  .pCab{display:flex;justify-content:space-between;align-items:baseline}
+  .pCab b{font-size:17px}
+  .pCab .cifra{font-size:20px}
+  .pCat .pe{margin-top:2px}
+  .pSubs{padding-left:14px}
+  .pFila{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--linea)}
+  .pFila:first-child{margin-top:8px}
+  .pFila .pn{min-width:0;font-size:15px}
+  .pFila .pn small{display:block;font-size:12px;color:var(--suave)}
+  .pFila .editar{margin-left:8px}
+  .pFila .pv{font-size:18px;white-space:nowrap}
+  .pFila input{width:130px;text-align:right;padding:6px 8px}
+
+  /* resumen */
+  .selResumen{margin-top:14px}
+  .totalRes{background:var(--sup);border-radius:8px;text-align:center;padding:12px;margin:14px 0 10px}
+  .totalRes > div:first-child{font-size:13px;color:var(--suave)}
+  .totalRes .cifra{font-size:32px;line-height:1.2}
+  .totalRes .dol{font-size:13px;color:var(--suave)}
+  .graf{display:flex;align-items:flex-end;gap:8px;border-bottom:1px solid var(--linea);padding:0 2px;height:210px}
+  .col{flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+    background:none;border:0;padding:0;cursor:pointer;color:inherit;font:inherit}
+  .col .warn{color:var(--alerta);font-size:15px;line-height:1.3}
+  .col .bar{width:100%;border-radius:6px 6px 0 0;color:#fff;font-size:11px;text-align:center;padding-top:5px;min-height:22px}
+  .etqs{display:flex;gap:8px;padding:5px 2px 0}
+  .etqs span{flex:1 1 0;min-width:0;text-align:center;font-size:11px;color:var(--suave);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .menu{margin-top:26px}
+  .menu button{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--linea);color:var(--tinta);font:inherit;font-size:16px;padding:14px 0;cursor:pointer}
+  .menu button small{display:block;font-size:13px;color:var(--suave);margin-top:3px;line-height:1.35}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -273,11 +274,8 @@
 <!-- ===== Sobres ===== -->
 <section class="vista" id="v-sobres">
   <header><h1>Sobres</h1><span class="mes" id="fechaHoy"></span></header>
-  <div class="resumen">
-    <div class="cifra grande" id="totalGasto">Q0</div>
-    <div class="pie" id="totalPie"></div>
-  </div>
-  <div class="segunda" id="totalSegunda"></div>
+  <div class="resumen"><div class="cifra grande" id="totalGasto">Q0</div></div>
+  <div class="pieTotal" id="totalPie"></div>
   <div id="avisos"></div>
   <div id="tablero"></div>
 </section>
@@ -290,193 +288,220 @@
     <span id="pMes"></span>
     <button type="button" id="pSig" aria-label="Mes siguiente">›</button>
   </div>
-  <p class="segunda" id="pResumen"></p>
+  <p class="segunda">Los montos se copian solos del mes anterior. Tocá "Editar" para cambiar uno.</p>
   <div id="pLista"></div>
-  <button class="txt" id="pCopiar" style="margin-top:18px">Copiar montos del mes anterior</button>
-  <p class="segunda">Los montos se guardan solos al salir de cada campo.</p>
 </section>
 
-<!-- ===== Caja ===== -->
-<section class="vista" id="v-caja" hidden>
-  <header><h1>Ingresos y caja</h1><span class="mes" id="sCaja"></span></header>
-  <div id="cSaldo"></div>
-  <div id="cIngresos"></div>
-  <div id="cPagar"></div>
-  <div id="cBalance"></div>
-  <div id="cMedios"></div>
-  <div id="cProx"></div>
+<!-- ===== Ingresos ===== -->
+<section class="vista" id="v-ing" hidden>
+  <header><h1>Ingresos</h1><span class="mes" id="ingMes"></span></header>
+  <div id="bancoBox"></div>
+  <div id="ingBox"></div>
 </section>
 
 <!-- ===== Tarjetas ===== -->
 <section class="vista" id="v-tar" hidden>
   <header><h1>Tarjetas</h1></header>
-  <p class="segunda">Tocá una tarjeta para personalizarla.</p>
-  <div id="listaTar" class="rejillaT" style="margin-top:12px"></div>
-  <button class="txt" id="agregarTarjeta" style="margin-top:14px">Agregar tarjeta</button>
-  <div class="editor" id="editorTar" hidden>
-    <div class="prev" id="prevTar"></div>
-    <label class="etiq" for="etNombre">NOMBRE</label>
-    <input type="text" id="etNombre" autocomplete="off" placeholder="BBVA rosa">
-    <span class="etiq">TIPO</span>
-    <div class="segm" id="etTipo">
-      <button type="button" data-v="credito">Crédito</button>
-      <button type="button" data-v="debito">Débito</button>
-    </div>
-    <span class="etiq">RED</span>
-    <div class="segm" id="etRed">
-      <button type="button" data-v="Visa">Visa</button>
-      <button type="button" data-v="Mastercard">Mastercard</button>
-    </div>
-    <span class="etiq">COLOR</span>
-    <div class="paleta" id="etColor"></div>
-    <div id="etFechas">
-      <div class="dias">
-        <div><label class="etiq" for="etCorte">DÍA DE CORTE</label>
-          <input type="number" id="etCorte" min="1" max="31" inputmode="numeric" placeholder="1 a 31"></div>
-        <div><label class="etiq" for="etPago">DÍA DE PAGO</label>
-          <input type="number" id="etPago" min="1" max="31" inputmode="numeric" placeholder="1 a 31"></div>
-      </div>
-      <p class="explica" id="etExplica" hidden></p>
-    </div>
-    <button class="principal" id="etGuardar">Guardar tarjeta</button>
-    <button class="secundaria peligro" id="etQuitar">Quitar esta tarjeta</button>
-  </div>
-  <div id="pagosTar"></div>
+  <div id="listaTar" class="rejillaT" style="margin-top:16px"></div>
+  <p class="segunda" id="tarAyuda"></p>
 </section>
 
-<!-- ===== Más ===== -->
-<section class="vista" id="v-mas" hidden>
-  <header><h1>Más</h1></header>
-  <div class="menu" style="margin-top:14px">
-    <button type="button" id="btnHistorial">Movimientos<small>Historial completo de gastos</small></button>
-    <button type="button" id="btnCsv">Exportar CSV<small>Gastos e ingresos para Excel o Sheets</small></button>
-    <button type="button" id="btnRespaldo">Respaldo<small>Copiar o restaurar todos los datos</small></button>
-    <button type="button" id="btnCero" class="peligro">Empezar de cero<small>Borra gastos, ingresos, presupuestos y pagos</small></button>
+<!-- ===== Resumen ===== -->
+<section class="vista" id="v-res" hidden>
+  <header><h1>Resumen</h1></header>
+  <select id="resMes" class="selResumen" aria-label="Mes"></select>
+  <div class="totalRes"><div>Total gastado</div><div class="cifra" id="resTotal">Q0</div><div class="dol" id="resDolar"></div></div>
+  <div id="grafica"></div>
+  <div class="menu">
+    <button type="button" id="btnMov">Movimientos<small>Todos tus gastos e ingresos del mes, del más reciente al más antiguo. Tocá uno para editarlo.</small></button>
+    <button type="button" id="btnInforme">Generar informe mensual<small>Crea un archivo de Excel con el resumen del mes y la lista de todos tus movimientos. Podés guardarlo en Drive.</small></button>
+    <button type="button" id="btnGuardarResp">Guardar respaldo<small>Guarda una copia de todos tus datos en un archivo. Hacelo cada fin de mes para no perder nada.</small></button>
+    <button type="button" id="btnRestaurar">Restaurar respaldo<small>Recupera tus datos desde un respaldo que guardaste antes. Reemplaza lo que hay ahora en la app.</small></button>
   </div>
+  <input type="file" id="archivoResp" hidden>
 </section>
-
 </main>
 
 <nav class="tabs" id="tabs" aria-label="Secciones">
   <button type="button" data-tab="sobres"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Sobres</button>
   <button type="button" data-tab="pres"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M16 11v4"/></svg>Presupuesto</button>
-  <button type="button" data-tab="caja"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></svg>Caja</button>
+  <button type="button" data-tab="ing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></svg>Ingresos</button>
   <button type="button" data-tab="tar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/></svg>Tarjetas</button>
-  <button type="button" data-tab="mas"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>Más</button>
+  <button type="button" data-tab="res"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M6 20v-6M11 20V6M16 20v-9M21 20v-4"/></svg>Resumen</button>
 </nav>
 
 <div class="fondo" id="fondo"></div>
 
-<!-- ===== Hoja: registrar gasto ===== -->
+<!-- ===== Hoja: registrar / editar gasto ===== -->
 <section class="hoja" id="hojaReg" role="dialog" aria-modal="true" aria-labelledby="tReg">
-  <h2 id="tReg">Registrar gasto</h2>
-  <span class="etiq">CATEGORÍA</span>
-  <div class="chips" id="rCats"></div>
-  <span class="etiq">SUBCATEGORÍA</span>
+  <div class="barraHoja"><button type="button" class="atras" data-atras aria-label="Regresar">←</button><h2 id="tReg">Registrar gasto</h2></div>
+  <span class="etiq" id="rEtiq" style="margin-top:0">SUBCATEGORÍA</span>
   <div class="chips" id="rSubs"></div>
-  <div class="formNueva" id="formNueva" hidden>
-    <label class="etiq" for="nsNombre" style="margin-top:0">NOMBRE</label>
-    <input type="text" id="nsNombre" autocomplete="off" placeholder="Claude">
-    <div class="chips" id="nsSug" style="margin-top:8px"></div>
-    <p class="aviso" id="nsAviso" hidden></p>
-    <label class="check"><input type="checkbox" id="nsCuotas"> Se paga en cuotas</label>
-    <div id="nsCuotasCampos" hidden>
-      <div class="dias">
-        <div><label class="etiq" for="nsCuotaMonto">MONTO DE CADA CUOTA</label>
-          <input type="number" id="nsCuotaMonto" inputmode="decimal" min="0" step="0.01"></div>
-        <div><label class="etiq" for="nsFin">ÚLTIMA CUOTA</label>
-          <input type="month" id="nsFin"></div>
-      </div>
-    </div>
-    <button class="principal" id="nsCrear" type="button">Crear subcategoría</button>
+  <div class="lineaNueva" id="rNuevaSub" hidden>
+    <input type="text" id="rNuevaNombre" autocomplete="off" placeholder="Nombre de la subcategoría">
+    <button type="button" class="txt" id="rNuevaCrear">Crear</button>
   </div>
-  <p class="sub" id="rInfo" style="margin:12px 0 0"></p>
+  <p class="recuerdo" id="rInfo"></p>
   <div class="cifra monto" id="pantalla">Q0</div>
   <div class="teclado" id="teclado">
-    <button data-t="1">1</button><button data-t="2">2</button><button data-t="3">3</button>
-    <button data-t="4">4</button><button data-t="5">5</button><button data-t="6">6</button>
-    <button data-t="7">7</button><button data-t="8">8</button><button data-t="9">9</button>
-    <button data-t=".">.</button><button data-t="0">0</button><button data-t="b">←</button>
+    <button type="button" data-t="1">1</button><button type="button" data-t="2">2</button><button type="button" data-t="3">3</button>
+    <button type="button" data-t="4">4</button><button type="button" data-t="5">5</button><button type="button" data-t="6">6</button>
+    <button type="button" data-t="7">7</button><button type="button" data-t="8">8</button><button type="button" data-t="9">9</button>
+    <button type="button" data-t=".">.</button><button type="button" data-t="0">0</button><button type="button" data-t="b" aria-label="Borrar">⌫</button>
   </div>
   <button type="button" class="lineaFecha" id="btnFecha"></button>
   <input type="date" id="inpFecha" hidden>
-  <span class="etiq">¿CÓMO LO PAGASTE?</span>
-  <div id="medios"></div>
-  <p class="recuerdo" id="recuerdo"></p>
-  <p class="recuerdo" id="avisoCiclo"></p>
-  <div id="cajaNota" hidden>
-    <label class="etiq" for="txtNota">¿DE QUÉ SE TRATA?</label>
-    <input type="text" id="txtNota" autocomplete="off">
+  <div id="rMedioBox">
+    <span class="etiq">¿CÓMO LO PAGASTE?</span>
+    <div class="rejillaT" id="rTarjetas"></div>
+    <div class="chips" id="rMedios" style="margin-top:10px"></div>
+    <input type="text" id="rOtroNombre" autocomplete="off" placeholder="¿Con qué pagaste? Ej.: Vale de regalo" style="margin-top:10px" hidden>
+    <div id="rCuotasBox" hidden>
+      <label class="check"><input type="checkbox" id="rCuotas"> En cuotas</label>
+      <div id="rCuotasCampos" hidden>
+        <label class="etiq" for="rNCuotas">NÚMERO DE CUOTAS</label>
+        <input type="number" id="rNCuotas" inputmode="numeric" min="2" max="48" placeholder="6">
+        <p class="recuerdo" id="rCuotasInfo"></p>
+      </div>
+    </div>
   </div>
-  <button class="secundaria" id="verNota" style="text-align:left;padding-left:0">+ agregar nota</button>
-  <button class="principal" id="btnGuardar" disabled>Guardar gasto</button>
+  <p class="recuerdo" id="rNotaEdit"></p>
+  <button type="button" class="principal" id="rGuardar" disabled>Guardar gasto</button>
+  <button type="button" class="secundaria peligro" id="rEliminar" hidden>Eliminar gasto</button>
+  <p class="subrotulo" id="rListaEt" hidden>REGISTROS DE ESTE MES</p>
+  <div id="rLista"></div>
+</section>
+
+<!-- ===== Hoja: nueva categoría / subcategoría ===== -->
+<section class="hoja" id="hojaNueva" role="dialog" aria-modal="true" aria-labelledby="tNueva">
+  <div class="barraHoja"><button type="button" class="atras" data-atras aria-label="Regresar">←</button><h2 id="tNueva">Nueva categoría</h2></div>
+  <div id="nCatBox">
+    <span class="etiq" style="margin-top:0">ELEGÍ O ESCRIBÍ EL NOMBRE</span>
+    <div class="chips" id="nNombres"></div>
+    <input type="text" id="nOtro" autocomplete="off" placeholder="Nombre de la categoría" style="margin-top:10px" hidden>
+    <span class="etiq">TIPO</span>
+    <div class="segm" id="nTipo">
+      <button type="button" data-v="fija">Fija</button>
+      <button type="button" data-v="variable">Variable</button>
+      <button type="button" data-v="ahorro">Ahorro</button>
+    </div>
+    <p class="recuerdo" id="nTipoAyuda"></p>
+  </div>
+  <span class="etiq" id="nSubsEt">SUBCATEGORÍAS · ELEGÍ UNA O VARIAS</span>
+  <div class="chips" id="nSubs"></div>
+  <div class="lineaNueva" id="nSubOtroBox" hidden>
+    <input type="text" id="nSubOtro" autocomplete="off" placeholder="Nombre de la subcategoría">
+    <button type="button" class="txt" id="nSubAgregar">Agregar</button>
+  </div>
+  <div id="nMetas"></div>
+  <p class="aviso" id="nAviso" hidden></p>
+  <button type="button" class="principal" id="nGuardar">Guardar categoría</button>
+</section>
+
+<!-- ===== Hoja: editar categoría ===== -->
+<section class="hoja" id="hojaEd" role="dialog" aria-modal="true" aria-labelledby="tEd">
+  <div class="barraHoja"><button type="button" class="atras" data-atras aria-label="Regresar">←</button><h2 id="tEd">Editar categoría</h2></div>
+  <label class="etiq" for="edNombre" style="margin-top:0">NOMBRE DE LA CATEGORÍA</label>
+  <input type="text" id="edNombre" autocomplete="off">
+  <span class="etiq">TIPO</span>
+  <div class="segm" id="edTipo">
+    <button type="button" data-v="fija">Fija</button>
+    <button type="button" data-v="variable">Variable</button>
+    <button type="button" data-v="ahorro">Ahorro</button>
+  </div>
+  <p class="subrotulo">SUBCATEGORÍAS</p>
+  <div id="edSubs"></div>
+  <button type="button" class="txt" id="edAgregar" style="margin-top:12px">+ Agregar subcategoría</button>
+  <p class="aviso" id="edAviso" hidden></p>
+  <button type="button" class="principal" id="edGuardar">Guardar cambios</button>
+  <button type="button" class="secundaria peligro" id="edEliminar" style="margin-top:22px">Eliminar categoría</button>
+</section>
+
+<!-- ===== Hoja: sección de una tarjeta ===== -->
+<section class="hoja" id="hojaTar" role="dialog" aria-modal="true" aria-labelledby="tTar">
+  <div class="barraHoja"><button type="button" class="atras" data-atras aria-label="Regresar">←</button><h2 id="tTar">Tarjeta</h2><button type="button" class="editar" id="tarEditar" style="font-size:15px">Editar</button></div>
+  <div id="tarCont"></div>
+</section>
+
+<!-- ===== Hoja: configurar tarjeta ===== -->
+<section class="hoja" id="hojaCfg" role="dialog" aria-modal="true" aria-labelledby="tCfg">
+  <div class="barraHoja"><button type="button" class="atras" data-atras aria-label="Regresar">←</button><h2 id="tCfg">Nueva tarjeta</h2></div>
+  <div class="prev" id="cfgPrev"></div>
+  <label class="etiq" for="cfgNombre">NOMBRE</label>
+  <input type="text" id="cfgNombre" autocomplete="off" placeholder="BBVA">
+  <span class="etiq">RED</span>
+  <div class="segm" id="cfgRed">
+    <button type="button" data-v="Visa">Visa</button>
+    <button type="button" data-v="Mastercard">Mastercard</button>
+  </div>
+  <span class="etiq">COLOR</span>
+  <div class="paleta" id="cfgColor"></div>
+  <span class="etiq">MONEDA</span>
+  <div class="segm" id="cfgMoneda">
+    <button type="button" data-v="Q">Quetzales</button>
+    <button type="button" data-v="$">Dólares</button>
+  </div>
+  <label class="etiq" for="cfgLimite">LÍMITE DE LA TARJETA</label>
+  <input type="number" id="cfgLimite" inputmode="decimal" min="0" step="0.01" placeholder="5000">
+  <div class="dias">
+    <div><label class="etiq" for="cfgCorte">DÍA DE CORTE</label>
+      <input type="number" id="cfgCorte" min="1" max="31" inputmode="numeric" placeholder="1 a 31"></div>
+    <div><label class="etiq" for="cfgPago">DÍA DE PAGO</label>
+      <input type="number" id="cfgPago" min="1" max="31" inputmode="numeric" placeholder="1 a 31"></div>
+  </div>
+  <p class="explica" id="cfgExplica" hidden></p>
+  <p class="aviso" id="cfgAviso" hidden></p>
+  <button type="button" class="principal" id="cfgGuardar">Guardar tarjeta</button>
+  <button type="button" class="secundaria peligro" id="cfgEliminar">Eliminar tarjeta</button>
+</section>
+
+<!-- ===== Hoja: pago de tarjeta ===== -->
+<section class="hoja" id="hojaPago" role="dialog" aria-modal="true" aria-labelledby="tPago">
+  <div class="barraHoja"><button type="button" class="atras" data-atras aria-label="Regresar">←</button><h2 id="tPago">Pago de tarjeta</h2></div>
+  <div class="prev" id="pgPrev"></div>
+  <label class="etiq" for="pgMonto">MONTO QUE PAGASTE</label>
+  <input type="number" id="pgMonto" inputmode="decimal" min="0" step="0.01" placeholder="">
+  <p class="recuerdo" id="pgRef"></p>
+  <label class="etiq" for="pgFecha">FECHA</label>
+  <input type="date" id="pgFecha">
+  <button type="button" class="principal" id="pgGuardar">Registrar pago</button>
+  <p class="subrotulo" id="pgListaEt">PAGOS ANTERIORES</p>
+  <div id="pgLista"></div>
+</section>
+
+<!-- ===== Hoja: nueva fuente de ingreso ===== -->
+<section class="hoja" id="hojaFuente" role="dialog" aria-modal="true" aria-labelledby="tFuente">
+  <div class="barraHoja"><button type="button" class="atras" data-atras aria-label="Regresar">←</button><h2 id="tFuente">Nueva fuente de ingreso</h2></div>
+  <span class="etiq" style="margin-top:0">ELEGÍ O ESCRIBÍ EL NOMBRE</span>
+  <div class="chips" id="fNombres"></div>
+  <input type="text" id="fOtro" autocomplete="off" placeholder="Nombre de la fuente" style="margin-top:10px" hidden>
+  <p class="aviso" id="fAviso" hidden></p>
+  <button type="button" class="principal" id="fGuardar">Guardar</button>
 </section>
 
 <!-- ===== Hoja: ingreso ===== -->
 <section class="hoja" id="hojaIng" role="dialog" aria-modal="true" aria-labelledby="tIng">
-  <h2 id="tIng">Ingreso</h2>
-  <p class="sub" id="sIng"></p>
-  <label class="etiq" for="iMonto">MONTO</label>
+  <div class="barraHoja"><button type="button" class="atras" data-atras aria-label="Regresar">←</button><h2 id="tIng">Ingreso</h2></div>
+  <label class="etiq" for="iMonto" style="margin-top:0">MONTO</label>
   <input type="number" id="iMonto" inputmode="decimal" min="0" step="0.01" placeholder="Q0">
   <label class="etiq" for="iFecha">FECHA</label>
   <input type="date" id="iFecha">
   <label class="etiq" for="iNota">NOTA (OPCIONAL)</label>
-  <input type="text" id="iNota" autocomplete="off" placeholder="Venta de chaqueta">
-  <button class="principal" id="iGuardar">Guardar ingreso</button>
-  <p class="subrotulo" id="iRotulo">REGISTROS DE ESTE MES</p>
+  <input type="text" id="iNota" autocomplete="off">
+  <button type="button" class="principal" id="iGuardar">Guardar ingreso</button>
+  <button type="button" class="secundaria peligro" id="iEliminar" hidden>Eliminar ingreso</button>
+  <p class="subrotulo" id="iListaEt">REGISTROS DE ESTE MES</p>
   <div id="iLista"></div>
-  <div class="filaAcc">
+  <div class="filaAcc" id="iAcc">
     <button type="button" id="iRenombrar">Cambiar nombre</button>
-    <button type="button" id="iEliminar" class="peligro">Eliminar fuente</button>
+    <button type="button" id="iBorrarFuente" class="peligro">Eliminar fuente</button>
   </div>
 </section>
 
-<!-- ===== Hoja: pago de tarjeta ===== -->
-<section class="hoja" id="hojaPagoT" role="dialog" aria-modal="true" aria-labelledby="tPagoT">
-  <h2 id="tPagoT">Pago de tarjeta</h2>
-  <div id="ptPrev" style="max-width:260px;margin:0 auto 6px"></div>
-  <p class="segunda" id="ptInfo"></p>
-  <label class="etiq" for="ptMonto">MONTO QUE PAGASTE</label>
-  <input type="number" id="ptMonto" inputmode="decimal" min="0" step="0.01" placeholder="Q0">
-  <label class="etiq" for="ptFecha">FECHA DEL PAGO</label>
-  <input type="date" id="ptFecha">
-  <button class="principal" id="ptGuardar">Registrar pago</button>
-  <p class="subrotulo" id="ptRotulo">PAGOS ANTERIORES</p>
-  <div id="ptLista"></div>
-</section>
-
-<!-- ===== Hoja: movimientos ===== -->
-<section class="hoja" id="hojaHist" role="dialog" aria-modal="true" aria-labelledby="tHist">
-  <h2 id="tHist">Movimientos</h2>
-  <p class="sub" id="sHist"></p>
-  <div id="movimientos"></div>
-</section>
-
-<!-- ===== Hoja: editar categoría ===== -->
-<section class="hoja" id="hojaEdCat" role="dialog" aria-modal="true" aria-labelledby="tEdCat">
-  <h2 id="tEdCat">Editar</h2>
-  <label class="etiq" for="edNombre">NOMBRE DE LA CATEGORÍA</label>
-  <input type="text" id="edNombre" autocomplete="off" placeholder="Mascotas">
-  <span class="etiq">CÓMO SE COMPORTA</span>
-  <div class="segm" id="edComp">
-    <button type="button" data-v="fijo">Fijo</button>
-    <button type="button" data-v="variable">Variable</button>
-    <button type="button" data-v="ahorro">Ahorro</button>
-  </div>
-  <p class="segunda" id="edAyuda"></p>
-  <p class="subrotulo">SUBCATEGORÍAS</p>
-  <div id="edSubs"></div>
-  <button class="txt" id="edAgregarSub" style="margin-top:12px">+ Agregar subcategoría</button>
-  <button class="principal" id="edGuardar">Guardar</button>
-  <button class="secundaria peligro" id="edEliminarCat" style="margin-top:24px">Eliminar categoría completa</button>
-</section>
-
-<!-- ===== Hoja: respaldo ===== -->
-<section class="hoja" id="hojaResp" role="dialog" aria-modal="true" aria-labelledby="tResp">
-  <h2 id="tResp">Respaldo</h2>
-  <p class="sub">Los datos viven solo en este teléfono. Copiá el texto y guardalo donde quieras; pegalo aquí para restaurar.</p>
-  <textarea id="areaResp" style="height:150px;font:13px/1.4 ui-monospace,Menlo,monospace"></textarea>
-  <button class="principal" id="restaurar">Restaurar desde el texto</button>
+<!-- ===== Hoja: lista (gastos de una categoría o movimientos) ===== -->
+<section class="hoja" id="hojaLista" role="dialog" aria-modal="true" aria-labelledby="tLista">
+  <div class="barraHoja"><button type="button" class="atras" data-atras aria-label="Regresar">←</button><h2 id="tLista">Lista</h2></div>
+  <div id="listaCont"></div>
 </section>
 
 <script src="sobres.js"></script>

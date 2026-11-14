@@ -471,7 +471,7 @@
   function lineaGasto(p){
     var s = A.subDe(p.g.subId), c = s ? A.catDe(s.catId) : null;
     var nombre = (lista.tipo === "mov" && c ? c.nombre + " · " : "") + (s ? s.nombre : "");
-    var det = A.diaCorto(p.g.fecha) + " · " + A.nombreMedio(p.g.medio) + (p.n > 1 ? " · cuota " + p.i + " de " + p.n : "");
+    var det = A.diaCorto(p.g.fecha) + " · " + A.nombreMedio(p.g.medio) + (p.n > 1 ? " · cuota " + p.i + " de " + p.n : "") + (p.g.nota ? " · " + p.g.nota : "");
     return '<button type="button" class="linea" data-lg="' + p.g.id + '"><span class="et">' + esc(nombre) + '<small>' + esc(det) +
            '</small></span><span class="ci">' + A.dinero(p.monto, p.moneda) + '</span></button>';
   }
@@ -604,7 +604,7 @@
     A.porcionesMes(mes).forEach(function(p){
       var s = A.subDe(p.g.subId), c = s ? A.catDe(s.catId) : null;
       items.push({f:p.i > 1 ? p.mes + "-01" : p.g.fecha, r:[fx(p.g.fecha), c && c.tipo === "ahorro" ? "Ahorro" : "Gasto", c ? c.nombre : "", s ? s.nombre : "",
-        num(p.monto, p.moneda === "$" ? FD : FQ), A.nombreMedio(p.g.medio), p.n > 1 ? "Cuota " + p.i + " de " + p.n : ""]});
+        num(p.monto, p.moneda === "$" ? FD : FQ), A.nombreMedio(p.g.medio), [p.n > 1 ? "Cuota " + p.i + " de " + p.n : "", p.g.nota || ""].filter(Boolean).join(" · ")]});
     });
     d.ingresos.forEach(function(i){
       if(A.mesDe(i.fecha) !== mes){ return; }

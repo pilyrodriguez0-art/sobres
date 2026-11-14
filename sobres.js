@@ -432,6 +432,17 @@ var APP = (function(){
   /* ================= REGISTRAR / EDITAR GASTO ================= */
   var reg = null;
 
+  /* Campo de nota: siempre visible al registrar o editar un gasto. */
+  (function(){
+    var ref = $("rNotaEdit");
+    var lab = document.createElement("label");
+    lab.className = "etiq"; lab.htmlFor = "rNota"; lab.textContent = "NOTA (OPCIONAL)";
+    var inp = document.createElement("input");
+    inp.type = "text"; inp.id = "rNota"; inp.autocomplete = "off"; inp.placeholder = "¿De qué se trata?";
+    ref.parentNode.insertBefore(lab, ref);
+    ref.parentNode.insertBefore(inp, ref);
+  })();
+
   function abrirRegistro(o){
     cargarReg(o);
     abrir("hojaReg");
@@ -451,6 +462,8 @@ var APP = (function(){
     }
     $("rNuevaSub").hidden = true; $("rNuevaNombre").value = "";
     $("rOtroNombre").value = ""; $("rOtroNombre").hidden = true;
+    var gn = o.gastoId ? porId(datos.gastos, o.gastoId) : null;
+    $("rNota").value = gn && gn.nota ? gn.nota : "";
     $("inpFecha").hidden = true;
     pintarReg();
     $("hojaReg").scrollTop = 0;
@@ -498,7 +511,7 @@ var APP = (function(){
       .sort(function(a, b){ return a.g.fecha < b.g.fecha ? 1 : -1; })
       .forEach(function(x){
         rows += '<button type="button" class="linea" data-rg="' + x.g.id + '"><span class="et">' + diaCorto(x.g.fecha) +
-          '<small>' + esc(nombreMedio(x.g.medio)) + (x.n > 1 ? ' · cuota ' + x.i + ' de ' + x.n : '') + '</small></span>' +
+          '<small>' + esc(nombreMedio(x.g.medio)) + (x.n > 1 ? ' · cuota ' + x.i + ' de ' + x.n : '') + (x.g.nota ? ' · ' + esc(x.g.nota) : '') + '</small></span>' +
           '<span class="ci">' + dinero(x.monto, x.moneda) + '</span></button>';
       });
     $("rListaEt").hidden = !rows || !!reg.id;
@@ -650,6 +663,8 @@ var APP = (function(){
     var g = reg.id ? porId(datos.gastos, reg.id) : {id:nid(), creado:Date.now()};
     g.subId = s.id; g.monto = monto; g.fecha = reg.fecha; g.medio = medio; g.cuotas = cuotas;
     g.moneda = (t && t.moneda === "$") ? "$" : "Q";
+    var nota = $("rNota").value.trim();
+    if(nota){ g.nota = nota; } else { delete g.nota; }
     if(!reg.id){ datos.gastos.push(g); }
     guardar();
     atras();
